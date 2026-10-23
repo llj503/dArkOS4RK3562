@@ -35,7 +35,7 @@ jobs:
       - name: Install validation tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y device-tree-compiler mtools dosfstools gdisk python3
+          sudo apt-get install -y device-tree-compiler mtools dosfstools gdisk
 
       - name: At least one device selected
         run: |
@@ -102,7 +102,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y mtools dosfstools gdisk xz-utils python3
+          sudo apt-get install -y mtools dosfstools xz-utils gdisk rsync
 
       - name: Build system image
         run: |
@@ -149,7 +149,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y mtools dosfstools gdisk xz-utils python3
+          sudo apt-get install -y mtools dosfstools xz-utils gdisk rsync
 
       - name: Build system image
         run: |

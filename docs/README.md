@@ -4,7 +4,7 @@
 - [Component licenses](../NOTICE.md)
 
 This repository is **build-only**: boot payloads under
-`boot/dArkOS/consoles/`, rootfs overlays under `rootfs/dArkOS/`, and the
+`boot/consoles/`, rootfs overlays under `rootfs/`, and the
 scripts/CI that assemble and release them. Kernel, DTS, panel GUI and
 EmulationStation sources live in their own projects:
 

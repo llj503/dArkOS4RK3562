@@ -1,16 +1,35 @@
 #!/usr/bin/env bash
 # Repository validation used by CI.
+#
+# Usage: ./scripts/validate.sh
+#
+# Checks the device layout, DTBs, shell syntax and that the overlays contain no
+# credential-like files.
 set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: ./scripts/validate.sh
+
+Validate the device layout, DTBs, shell syntax and credential-free overlays.
+EOF
+    exit 0
+}
+
+case "${1:-}" in
+    -h|--help) usage ;;
+esac
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 DEVICES=(ngp45ht pocketais)
-COMMON_KERNEL="$ROOT/boot/dArkOS/consoles/kernel/5.10"
+COMMON_KERNEL="$ROOT/boot/consoles/kernel/5.10"
 
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
+echo "== validate dArkOS4RK3562 =="
+
 for f in "$ROOT/build_image.sh" "$ROOT/scripts/build_boot.sh" \
-         "$ROOT/scripts/build_overlay.py" "$ROOT/scripts/fix_gpt.sh" \
-         "$ROOT/scripts/fetch_base.sh"; do
+         "$ROOT/scripts/fix_gpt.sh" "$ROOT/scripts/fetch_base.sh"; do
     [ -f "$f" ] || fail "missing build entry point: $f"
 done
 
@@ -19,8 +38,8 @@ for f in "$COMMON_KERNEL/Image" "$COMMON_KERNEL/uInitrd"; do
 done
 
 for dev in "${DEVICES[@]}"; do
-    b="$ROOT/boot/dArkOS/consoles/$dev"
-    r="$ROOT/rootfs/dArkOS/$dev"
+    b="$ROOT/boot/consoles/$dev"
+    r="$ROOT/rootfs/$dev"
     for f in "$b/extlinux/extlinux.conf" "$b/firstboot.sh" "$r"; do
         [ -e "$f" ] || fail "missing $dev file: $f"
     done
@@ -34,7 +53,7 @@ for dev in "${DEVICES[@]}"; do
     dtc -I dtb -O dts -o /tmp/darkos4rk3562-$dev.dts "$b/$fdt" 2>/dev/null \
         || fail "$dev DTB does not decompile: $b/$fdt"
 
-        # Firmware/modules are optional: NGP45HT keeps its AIC8800DC stack in the
+    # Firmware/modules are optional: NGP45HT keeps its AIC8800DC stack in the
     # rootfs overlay, Pocket AIS puts D80 firmware + modules on p3 for firstboot.
     for d in firmware modules; do
         if [ -d "$b/$d" ]; then
@@ -57,11 +76,6 @@ done < <(grep -RIl '^#!' "$ROOT/boot" "$ROOT/rootfs" "$ROOT/scripts" 2>/dev/null
 
 bash -n "$ROOT/build_image.sh"
 
-# Python syntax for the build tools.
-while IFS= read -r f; do
-    PYTHONPYCACHEPREFIX=/tmp/darkos4rk3562-pyc python3 -m py_compile "$f"
-done < <(find "$ROOT/scripts" -name '*.py' -type f)
-
 # No device credentials / private keys in the overlays or boot trees.
 if find "$ROOT/boot" "$ROOT/rootfs" -type f \
     \( -name 'authorized_keys' -o -name 'id_rsa*' -o -name 'id_ed25519*' \
@@ -72,7 +86,7 @@ if find "$ROOT/boot" "$ROOT/rootfs" -type d -name .ssh | grep -q .; then
     fail ".ssh directory found in boot/rootfs overlays"
 fi
 if grep -rIl -E 'BEGIN (OPENSSH|RSA|EC|DSA) PRIVATE KEY|^[[:space:]]*psk=[^[:space:]]' \
-    "$ROOT/rootfs/dArkOS" "$ROOT/boot/dArkOS/consoles" \
+    "$ROOT/rootfs" "$ROOT/boot" \
     --exclude='*.bin' --exclude='*.ko' --exclude='*.dtb' --exclude='*.bmp' \
     --exclude-dir=firmware --exclude-dir=modules 2>/dev/null | grep -q .; then
     fail "private key or WiFi PSK material found in overlays"

@@ -1,13 +1,28 @@
 #!/usr/bin/env bash
 # Download, verify and unpack the published base image for one console.
 #
+# Usage:
+#   ./scripts/fetch_base.sh <ngp45ht|pocketais> <out.img>
+#
 # The base images are external (12-13 GiB raw) and are published as split xz
 # parts.  This helper downloads the parts and the release checksum file,
 # verifies the parts, streams them through xz into <out.img>, and deletes the
-# parts.  It never writes outside the output directory.
-#
-# Usage: scripts/fetch_base.sh <ngp45ht|pocketais> <out.img>
+# parts.  It never writes outside the output directory and needs ~17 GiB free.
 set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: ./scripts/fetch_base.sh <ngp45ht|pocketais> <out.img>
+
+Download the published split-xz base image, verify its release checksums,
+unpack it to <out.img> and delete the downloaded parts.
+EOF
+    exit 0
+}
+
+case "${1:-}" in
+    -h|--help) usage ;;
+esac
 
 DEV=${1:?usage: fetch_base.sh <ngp45ht|pocketais> <out.img>}
 OUT=${2:?usage: fetch_base.sh <ngp45ht|pocketais> <out.img>}
@@ -73,4 +88,4 @@ if [ "$SIZE" -lt $((11 * 1024 * 1024 * 1024)) ]; then
     rm -f "$OUT"
     exit 1
 fi
-echo "base image: $OUT ($SIZE bytes)"
+echo "== base ready: $OUT ($SIZE bytes) =="

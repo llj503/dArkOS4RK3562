@@ -1,4 +1,4 @@
-# boot/dArkOS
+# boot
 
 The boot payload layout mirrors `arkos4clone`:
 
@@ -7,8 +7,9 @@ The boot payload layout mirrors `arkos4clone`:
   AIC8800DC firmware/modules and battery bitmaps.
 - `consoles/pocketais/`: Pocket AIS extlinux, `rk3562-ro520c.dtb`, firstboot,
   expand/fstab, AIC8800D80 firmware/modules and battery bitmaps.
-- `clone.sh`: common firstboot wrapper (detects the console, applies
-  `update-darkos-<device>.tar`, then runs the device `/firstboot.sh`).
+- `clone.sh`: optional manual overlay installer (detects the console, applies a
+  manually supplied `update-darkos-<device>.tar` if present, then runs the
+  device `/firstboot.sh`). The image build does not generate that tar.
 - `expandtoexfat.sh`: generic p5 expansion reference; the device p3 scripts
   remain the executable copies used by firstboot.
 

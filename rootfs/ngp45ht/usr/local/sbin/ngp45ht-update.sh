@@ -1,6 +1,6 @@
 #!/bin/bash
-# NGP45HT post-overlay setup. Idempotent; called by /boot/dArkOS/clone.sh
-# after the update tar is extracted, or manually:
+# NGP45HT post-overlay setup. Idempotent; called by /boot/clone.sh after a
+# manually supplied overlay tar is extracted, or manually:
 #   sudo /usr/local/sbin/ngp45ht-update.sh
 set -u
 
@@ -33,9 +33,8 @@ fi
 for f in /opt/ngp-panel/panel.conf /opt/ngp-panel/led.conf; do
     [ -f "$f" ] || continue
     chown ark:ark "$f" 2>/dev/null || true
+    chmod 0777 "$f" 2>/dev/null || true
 done
-chmod 0664 /opt/ngp-panel/panel.conf 2>/dev/null || true
-chmod 0666 /opt/ngp-panel/led.conf 2>/dev/null || true
 
 # Overlay may add modules on an image whose modules.dep predates them.
 depmod -a 5.10.226 2>/dev/null || depmod -a 2>/dev/null || true

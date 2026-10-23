@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Repair the Pocket AIS TF GPT so the eMMC U-Boot accepts the card.
 #
+# Usage:
+#   ./scripts/fix_gpt.sh <image.img>
+#
 # Sets:
 #   p1 type = a60b0000-0000-4c7e-8000-015e00004db7 (Rockchip uboot)
 #   p2 type = d46e0000-0000-457f-8000-220d000030db (Rockchip resource)
@@ -8,9 +11,21 @@
 #
 # sgdisk rewrites the primary and backup GPTs and their CRC32s, and leaves the
 # disk/partition unique GUIDs and start/end sectors alone.
-#
-# Usage: scripts/fix_gpt.sh <image.img>
 set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: ./scripts/fix_gpt.sh <image.img>
+
+Restore the Pocket AIS GPT: p1/p2 Rockchip type GUIDs and p3 bootable (0x4).
+sgdisk rewrites both GPTs and their CRC32s, then verifies the result.
+EOF
+    exit 0
+}
+
+case "${1:-}" in
+    -h|--help) usage ;;
+esac
 
 IMG=${1:?usage: fix_gpt.sh <image.img>}
 [ -f "$IMG" ] || { echo "image not found: $IMG" >&2; exit 1; }
@@ -22,6 +37,7 @@ HDR=$(dd if="$IMG" bs=1 skip=512 count=8 status=none)
 P1=a60b0000-0000-4c7e-8000-015e00004db7
 P2=d46e0000-0000-457f-8000-220d000030db
 
+echo "== fix Pocket AIS GPT: $IMG =="
 sgdisk \
     -t "1:$P1" \
     -t "2:$P2" \
@@ -40,4 +56,4 @@ sgdisk -v "$IMG" | grep -qi 'No problems found' || {
     echo "sgdisk -v reported GPT problems" >&2
     exit 1
 }
-echo "GPT repaired: p1=RK uboot, p2=RK resource, p3 bootable"
+echo "== GPT ready: p1=RK uboot, p2=RK resource, p3 bootable =="

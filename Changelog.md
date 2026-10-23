@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-23 — flatten layout and shell-only build scripts
+
+- Removed the redundant `boot/dArkOS` and `rootfs/dArkOS` levels. This tree
+  has one base system, so the wrapper level carried no selection logic; the
+  layout is now `boot/consoles/<device>` + `boot/clone.sh` and
+  `rootfs/common` + `rootfs/<device>`.
+- Removed the rootfs overlay tar step. `build_image.sh` now rsyncs
+  `rootfs/common` and then `rootfs/<device>` directly into the mounted p4 with
+  `--chown=1000:1000 --chmod=D0777,F0777`; every overlay entry is
+  `1000:1000`/`0777`, matching the arkos4clone dArkOS payload convention.
+  `scripts/build_overlay.py` / `.sh` are gone.
+- Replaced `scripts/fix_gpt.py` with `scripts/fix_gpt.sh`, built on `sgdisk`.
+  `build_image.sh` and CI now depend on `gdisk` instead of python3.
+
 ## 2026-10-23 — system images only, no update packages
 
 - Renamed `scripts/build_boot_bundle.sh` → `scripts/build_boot.sh`,

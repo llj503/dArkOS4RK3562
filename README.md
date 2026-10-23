@@ -26,24 +26,36 @@ The layout intentionally follows `arkos4clone`:
 
 ```text
 .github/workflows/          CI: validate, build both devices, upload draft release
-boot/dArkOS/
-  clone.sh                  common firstboot wrapper / overlay installer
+boot/
+  clone.sh                  optional firstboot wrapper / manual overlay installer
   expandtoexfat.sh          p5 expansion reference
   consoles/
     kernel/5.10/            common Image + uInitrd
     ngp45ht/                extlinux, DTB, firstboot, ngp-expand, battery BMPs
     pocketais/              extlinux, DTB, firstboot, AIC8800D80 firmware/modules
-rootfs/dArkOS/
+rootfs/
   common/                   shared scripts (perfmax/perfnorm, sleep, ngp-core-update)
   ngp45ht/                  AIC8800DC stack, panel/LED/network GUI, services
   pocketais/                Pocket AIS ES, theme, RA config, battery/USB/sleep scripts
-scripts/                    build_boot.sh, build_overlay.py, fix_gpt.sh,
-                            fetch_base.sh, validate.sh
+scripts/                    build_boot.sh, fix_gpt.sh, fetch_base.sh,
+                            validate.sh
 uboot/                      boot-chain notes (no U-Boot binaries)
 roms/                       image/theme placeholder, no games or BIOS
 dtbTools/                   DTB inspection notes (sources external)
 build_image.sh              build a complete system image from a base image
 ```
+
+### Build scripts
+
+| Command | Purpose | Output |
+| --- | --- | --- |
+| `sudo ./build_image.sh <device> --base IMG` or `--fetch-base` | Assemble the full system image | `out/DarkOS4RK3562-<device>.img` |
+| `./scripts/build_boot.sh <device> [out.img]` | Build the 99 MiB p3 FAT boot bundle | `out/DarkOS-<device>-p3.img` |
+| `./scripts/fetch_base.sh <device> <out.img>` | Download, verify and unpack a published base image | `<out.img>` |
+| `./scripts/fix_gpt.sh IMG` | Restore the Pocket AIS Rockchip GPT | in-place |
+| `./scripts/validate.sh` | Validate layout, DTBs, shell syntax and credentials | - |
+
+`<device>` is `ngp45ht` or `pocketais`; every helper accepts `-h` / `--help`.
 
 ## Build
 
@@ -66,19 +78,19 @@ copying it. The base image is never modified otherwise. Base URLs and checksums
 are in [`scripts/fetch_base.sh`](scripts/fetch_base.sh); the compressed bases
 are about 4.2 GiB (NGP45HT) and 3.0 GiB (Pocket AIS).
 
-The builder writes p3 at 16 MiB and extracts the rootfs overlay into the BTRFS
+The builder writes p3 at 16 MiB and rsyncs the rootfs overlay into the BTRFS
 p4 at 116 MiB. For Pocket AIS it also zeroes sectors 64–32767 and runs
 `scripts/fix_gpt.sh` to restore the Rockchip p1/p2 type GUIDs, the p3 bootable
 attribute and both GPT CRCs. The base images' p5 is left as-is; the device
 firstboot/expand script handles `/roms`.
 
-p3 and the rootfs overlay are **internal intermediates** in a temporary
-directory and are deleted after the image is assembled. No update package is
-built or published. For debugging, the helpers can still be called directly:
+p3 is an **internal intermediate** in a temporary directory and is deleted
+after the image is assembled. The rootfs overlay is applied directly to p4;
+no update package is built or published. For debugging, the p3 helper can
+still be called directly:
 
 ```bash
 ./scripts/build_boot.sh ngp45ht /tmp/p3.img
-./scripts/build_overlay.py ngp45ht /tmp/rootfs.tar
 ```
 
 ### What goes into the image
@@ -94,11 +106,10 @@ NGP45HT uses the fixed `ngp-expand.sh` (unmount before `mkfs`, byte-sized
 `ngp-rompool.sh`). The Pocket AIS boot bundle keeps the stock
 `expandtoexfat.sh`.
 
-The rootfs overlay wins over `common`. Modes are assigned by
-`scripts/build_overlay.py` (shebang/ELF → 0755, `panel.conf` 0664,
-`led.conf` 0666, everything else 0644), because a Windows checkout cannot
-represent the executable bit. Entry mtimes are fixed, so repeated overlay
-builds are byte-identical.
+The rootfs overlay wins over `common`. `build_image.sh` rsyncs `common` first
+and the device overlay second with `--chown=1000:1000 --chmod=D0777,F0777`, so
+every overlay entry is `1000:1000` (ark:ark) with mode `0777`, matching the
+arkos4clone dArkOS payload convention.
 
 The NGP45HT overlay ships prebuilt aarch64 `ngp-panel-gui`, `ngp-wifi-gui` and
 `ngp-led-off`, built from the C sources in `opt/ngp-panel/src`. It also installs
@@ -115,7 +126,7 @@ is only enabled when it already exists on the image.
 ./scripts/validate.sh
 ```
 
-It checks the device layout, DTBs (`dtc` decompile), shell/Python syntax,
+It checks the device layout, DTBs (`dtc` decompile), shell syntax,
 executable scripts and rejects credential-like files (`authorized_keys`,
 `*.nmconnection`, private key headers, WiFi PSKs) from the overlays.
 

@@ -12,7 +12,7 @@
 #   --outdir DIR      directory for downloaded bases and default output
 #
 # The source base is never modified unless --in-place is given.  p3 is written
-# at 16 MiB and the rootfs overlay is extracted into the BTRFS p4 at 116 MiB.
+# at 16 MiB and the rootfs overlay is synced into the BTRFS p4 at 116 MiB.
 # Pocket AIS additionally has sectors 64-32767 zeroed and its GPT repaired.
 set -euo pipefail
 
@@ -65,9 +65,12 @@ esac
     exit 2
 }
 
-for c in mkfs.vfat mcopy python3 sgdisk losetup mount tar sha256sum; do
+for c in mkfs.vfat mcopy losetup mount rsync sha256sum; do
     command -v "$c" >/dev/null || { echo "missing tool: $c" >&2; exit 1; }
 done
+if [ "$DEV" = pocketais ]; then
+    command -v sgdisk >/dev/null || { echo "missing tool: sgdisk" >&2; exit 1; }
+fi
 if [ "$FETCH" -eq 1 ]; then
     for c in curl xz; do
         command -v "$c" >/dev/null || { echo "missing tool: $c" >&2; exit 1; }
@@ -105,7 +108,6 @@ trap cleanup EXIT
 
 echo "== build $DEV system image =="
 "$ROOT/scripts/build_boot.sh" "$DEV" "$WORK/p3.img"
-python3 "$ROOT/scripts/build_overlay.py" "$DEV" "$WORK/rootfs.tar"
 
 if [ "$FETCH" -eq 0 ] && [ "$IN_PLACE" -eq 0 ]; then
     echo "copy base: $BASE -> $BUILD"
@@ -121,9 +123,12 @@ if [ "$DEV" = pocketais ]; then
     "$ROOT/scripts/fix_gpt.sh" "$BUILD"
 fi
 
-echo "extract rootfs overlay into p4"
+echo "apply rootfs overlay into p4"
 mount -t btrfs -o loop,rw,offset=121634816 "$BUILD" "$MNT"
-tar --numeric-owner -xf "$WORK/rootfs.tar" -C "$MNT"
+rsync -aHAX -I --numeric-ids --chown=1000:1000 --chmod=D0777,F0777 \
+    "$ROOT/rootfs/common/" "$MNT"/
+rsync -aHAX -I --numeric-ids --chown=1000:1000 --chmod=D0777,F0777 \
+    "$ROOT/rootfs/$DEV/" "$MNT"/
 sync
 umount "$MNT"
 

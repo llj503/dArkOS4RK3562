@@ -1,6 +1,6 @@
 # dtbTools
 
-The device DTBs are prebuilt in `boot/dArkOS/consoles/<device>/`. Their sources
+The device DTBs are prebuilt in `boot/consoles/<device>/`. Their sources
 are not kept in this build-only repository:
 
 - NGP45HT: `rk3562-ngp45ht.dts`, `rk3562-ngp45ht.dts.tpl`,
@@ -13,9 +13,9 @@ Validation only inspects the shipped DTB with `dtc`:
 
 ```bash
 dtc -I dtb -O dts -o /tmp/board.dts \
-  boot/dArkOS/consoles/ngp45ht/rk3562-ngp45ht.dtb
+  boot/consoles/ngp45ht/rk3562-ngp45ht.dtb
 dtc -I dtb -O dts -o /tmp/board.dts \
-  boot/dArkOS/consoles/pocketais/rk3562-ro520c.dtb
+  boot/consoles/pocketais/rk3562-ro520c.dtb
 ```
 
 The DTB tooling from arkos4clone (DTB analysis/customization) is not duplicated
