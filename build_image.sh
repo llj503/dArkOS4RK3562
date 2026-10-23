@@ -1,71 +1,124 @@
 #!/usr/bin/env bash
-# Apply a device boot bundle and (optionally) the rootfs overlay to a base
-# dArkOS RK3562 image.  The base images are NOT in this repository.
+# Single build entry point for the two RK3562 dArkOS consoles.
 #
-# Usage:
-#   sudo ./build_image.sh <base.img> <ngp45ht|pocketais> [--rootfs] [out.img]
+# Artifact mode (default, no root needed):
+#   ./build_image.sh                      # both consoles
+#   ./build_image.sh ngp45ht pocketais    # explicit selection
+#   ./build_image.sh ngp45ht --outdir dist
 #
-#   --rootfs  also mount p4 (BTRFS) and extract update-darkos-<device>.tar
+# Produces:
+#   <outdir>/DarkOS-<device>-p3.img       99 MiB FAT boot partition
+#   <outdir>/update-darkos-<device>.tar   rootfs overlay
+#   <outdir>/SHA256SUMS.txt
 #
-# The p3/p4 offsets match both the NGP45HT and Pocket AIS RK3562 layouts:
-#   p3: 16 MiB, 99 MiB FAT
-#   p4: 116 MiB, BTRFS
+# Full-image mode (Linux, root, one device):
+#   sudo ./build_image.sh pocketais --base base.img
+#   sudo ./build_image.sh ngp45ht --base base.img --output out.img
+#
+# The base image is copied first and only the copy is modified.  p3 is written
+# at 16 MiB; the overlay is extracted into the BTRFS p4 at
+# 116 MiB.  Pocket AIS additionally has sectors 64-32767 zeroed and its GPT
+# repaired (Rockchip p1/p2 types, p3 bootable flag, both CRCs).
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-BASE=${1:?usage: build_image.sh <base.img> <ngp45ht|pocketais> [--rootfs] [out.img]}
-DEV=${2:?usage: build_image.sh <base.img> <ngp45ht|pocketais> [--rootfs] [out.img]}
-shift 2
+DEVICES=()
+OUTDIR="$ROOT/out"
+BASE=""
+OUTPUT=""
 
-ROOTFS=0
-OUT=""
+usage() {
+    sed -n "2,21p" "$0" | sed 's/^# \{0,1\}//'
+    exit "${1:-0}"
+}
+
 while [ $# -gt 0 ]; do
     case "$1" in
-        --rootfs) ROOTFS=1 ;;
-        *) OUT=$1 ;;
+        -h|--help) usage 0 ;;
+        --base) BASE=${2:?--base needs an image path}; shift 2 ;;
+        --output) OUTPUT=${2:?--output needs a path}; shift 2 ;;
+        --outdir) OUTDIR=${2:?--outdir needs a path}; shift 2 ;;
+        -*) echo "unknown option: $1" >&2; usage 1 ;;
+        *) DEVICES+=("$1"); shift ;;
     esac
-    shift
 done
 
-case "$DEV" in
-    ngp45ht|pocketais) ;;
-    *) echo "unknown device: $DEV" >&2; exit 2 ;;
-esac
+[ "${#DEVICES[@]}" -gt 0 ] || DEVICES=(ngp45ht pocketais)
+for dev in "${DEVICES[@]}"; do
+    case "$dev" in
+        ngp45ht|pocketais) ;;
+        *) echo "unknown device: $dev" >&2; exit 2 ;;
+    esac
+done
+
+if [ -n "$BASE" ] && [ "${#DEVICES[@]}" -ne 1 ]; then
+    echo "--base builds one device at a time (got: ${DEVICES[*]})" >&2
+    exit 2
+fi
+
+mkdir -p "$OUTDIR"
+
+echo "== build artifacts =="
+BUILT=()
+for dev in "${DEVICES[@]}"; do
+    p3="$OUTDIR/DarkOS-${dev}-p3.img"
+    overlay="$OUTDIR/update-darkos-${dev}.tar"
+    "$ROOT/scripts/build_boot.sh" "$dev" "$p3"
+    python3 "$ROOT/scripts/build_overlay.py" "$dev" "$overlay"
+    BUILT+=("DarkOS-${dev}-p3.img" "update-darkos-${dev}.tar")
+done
+
+(
+    cd "$OUTDIR"
+    sha256sum "${BUILT[@]}" > SHA256SUMS.txt
+    echo "== checksums =="
+    cat SHA256SUMS.txt
+)
+
+if [ -z "$BASE" ]; then
+    echo "== done: $OUTDIR =="
+    exit 0
+fi
+
+DEV=${DEVICES[0]}
 [ -f "$BASE" ] || { echo "base image not found: $BASE" >&2; exit 1; }
-[ -n "$OUT" ] || OUT="${BASE%.img}-${DEV}.img"
-[ "$BASE" != "$OUT" ] || { echo "output must differ from base image" >&2; exit 1; }
+[ "$(id -u)" -eq 0 ] || { echo "full-image mode needs root (use sudo)" >&2; exit 1; }
+for c in losetup mount tar; do
+    command -v "$c" >/dev/null || { echo "missing tool: $c" >&2; exit 1; }
+done
 
-P3_OFFSET_MIB=16
-P4_OFFSET=$((237568 * 512))
+P3="$OUTDIR/DarkOS-${DEV}-p3.img"
+OVERLAY="$OUTDIR/update-darkos-${DEV}.tar"
+OUT=${OUTPUT:-"$OUTDIR/DarkOS-${DEV}.img"}
+[ "$BASE" != "$OUT" ] || { echo "output must differ from the base image" >&2; exit 1; }
+
 WORK=$(mktemp -d)
-trap 'rm -rf "$WORK"' EXIT
+MNT="$WORK/p4"
+mkdir -p "$MNT"
+cleanup() {
+    mountpoint -q "$MNT" 2>/dev/null && umount "$MNT" 2>/dev/null || true
+    rm -rf "$WORK"
+}
+trap cleanup EXIT
 
-echo "== boot bundle =="
-"$ROOT/scripts/build_boot_bundle.sh" "$DEV" "$WORK/p3.img"
-
-echo "== copy base image =="
+echo "== full image: $DEV =="
+echo "copy: $BASE -> $OUT"
 cp --sparse=always "$BASE" "$OUT"
-dd if="$WORK/p3.img" of="$OUT" bs=1M seek="$P3_OFFSET_MIB" conv=notrunc status=progress
+
+echo "write p3 at 16 MiB"
+dd if="$P3" of="$OUT" bs=1M seek=16 conv=notrunc status=progress
 
 if [ "$DEV" = pocketais ]; then
-    echo "== Pocket AIS: zero TF idbloader/p1/p2 and fix GPT =="
+    echo "zero idbloader/p1/p2 and repair GPT"
     dd if=/dev/zero of="$OUT" bs=512 seek=64 count=32704 conv=notrunc status=none
-    python3 "$ROOT/scripts/fix_gpt_20261020.py" "$OUT"
+    python3 "$ROOT/scripts/fix_gpt.py" "$OUT"
 fi
 
-if [ "$ROOTFS" -eq 1 ]; then
-    echo "== rootfs overlay =="
-    "$ROOT/scripts/build_update_tar.sh" "$DEV" "$WORK/rootfs.tar"
-    MNT="$WORK/p4"
-    mkdir -p "$MNT"
-    mount -t btrfs -o loop,rw,offset="$P4_OFFSET" "$OUT" "$MNT"
-    trap 'umount "$MNT" 2>/dev/null || true; rm -rf "$WORK"' EXIT
-    tar --numeric-owner -xf "$WORK/rootfs.tar" -C "$MNT"
-    sync
-    umount "$MNT"
-    trap 'rm -rf "$WORK"' EXIT
-fi
-
+echo "extract rootfs overlay into p4"
+mount -t btrfs -o loop,rw,offset=121634816 "$OUT" "$MNT"
+tar --numeric-owner -xf "$OVERLAY" -C "$MNT"
 sync
-echo "image: $OUT ($(stat -c %s "$OUT") bytes)"
+umount "$MNT"
+
+echo "image: $OUT"
 sha256sum "$OUT"

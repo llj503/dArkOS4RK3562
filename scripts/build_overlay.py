@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""Build a rootfs overlay tar with explicit, platform-independent modes.
+"""Build the rootfs overlay tar for one RK3562 console.
 
-Windows cannot represent the executable bit on a mounted repo, so a plain
-`tar` there records 0777 for every file.  This walks the two overlay trees and
-sets modes from the content (shebang/ELF -> 0755), keeping config files 0644
-and the two ark-writable panel files 0664/0666.
+The archive is extracted at / on the target rootfs and contains the common
+overlay plus the device overlay (device files win).  Modes are content-based so
+the result is identical on Windows and Linux; entry mtimes are fixed, so
+repeated builds are byte-identical.
 
-Usage: make_update_tar.py <common-dir> <device-dir> <out.tar>
+Usage: scripts/build_overlay.py <ngp45ht|pocketais> [out.tar]
 """
+import hashlib
 import os
 import sys
 import tarfile
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEVICES = ("ngp45ht", "pocketais")
 MODE_OVERRIDES = {
     "opt/ngp-panel/panel.conf": 0o664,
     "opt/ngp-panel/led.conf": 0o666,
@@ -65,18 +68,33 @@ def add_tree(tar, base):
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
         raise SystemExit(__doc__)
-    common, dev, out = sys.argv[1:]
-    if not os.path.isdir(common) or not os.path.isdir(dev):
-        raise SystemExit(f"missing overlay dir: {common} or {dev}")
+    dev = sys.argv[1]
+    if dev not in DEVICES:
+        raise SystemExit(f"unknown device: {dev} (choose from {', '.join(DEVICES)})")
+    out = sys.argv[2] if len(sys.argv) == 3 else os.path.join(
+        ROOT, "out", f"update-darkos-{dev}.tar")
+
+    common = os.path.join(ROOT, "rootfs", "dArkOS", "common")
+    device = os.path.join(ROOT, "rootfs", "dArkOS", dev)
+    for d in (common, device):
+        if not os.path.isdir(d):
+            raise SystemExit(f"missing overlay dir: {d}")
+
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     if os.path.exists(out):
         os.unlink(out)
     with tarfile.open(out, "w", format=tarfile.GNU_FORMAT) as tar:
         add_tree(tar, common)
-        add_tree(tar, dev)
-    print(f"rootfs overlay: {out} ({os.path.getsize(out)} bytes)")
+        add_tree(tar, device)
+
+    digest = hashlib.sha256()
+    with open(out, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    print(f"overlay {dev}: {out} ({os.path.getsize(out)} bytes)")
+    print(f"{digest.hexdigest()}  {out}")
 
 
 if __name__ == "__main__":

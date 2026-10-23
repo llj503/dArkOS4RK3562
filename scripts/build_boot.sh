@@ -6,11 +6,11 @@
 #   boot/dArkOS/consoles/<device>/                    extlinux, DTB, firstboot,
 #                                                     firmware, modules, battery BMPs
 #
-# Usage: scripts/build_boot_bundle.sh <ngp45ht|pocketais> [out.img]
+# Usage: scripts/build_boot.sh <ngp45ht|pocketais> [out.img]
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-DEV=${1:?usage: build_boot_bundle.sh <ngp45ht|pocketais> [out.img]}
+DEV=${1:?usage: build_boot.sh <ngp45ht|pocketais> [out.img]}
 OUT=${2:-"$ROOT/out/DarkOS-${DEV}-p3.img"}
 COMMON="$ROOT/boot/dArkOS/consoles/kernel/5.10"
 DEV_DIR="$ROOT/boot/dArkOS/consoles/$DEV"

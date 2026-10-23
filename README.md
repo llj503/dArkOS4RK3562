@@ -25,7 +25,7 @@ SSH/WiFi credentials.
 The layout intentionally follows `arkos4clone`:
 
 ```text
-.github/workflows/          CI (validate + p3/rootfs artifacts) and manual release
+.github/workflows/          CI: validate, build both devices, upload draft release
 boot/dArkOS/
   clone.sh                  common firstboot wrapper / overlay installer
   expandtoexfat.sh          p5 expansion reference
@@ -37,22 +37,40 @@ rootfs/dArkOS/
   common/                   shared scripts (perfmax/perfnorm, sleep, ngp-core-update)
   ngp45ht/                  AIC8800DC stack, panel/LED/network GUI, services
   pocketais/                Pocket AIS ES, theme, RA config, battery/USB/sleep scripts
-scripts/                    build_boot_bundle.sh, build_update_tar.sh,
-                            make_update_tar.py, fix_gpt_20261020.py, validate.sh
+scripts/                    build_boot.sh, build_overlay.py, fix_gpt.py, validate.sh
 uboot/                      boot-chain notes (no U-Boot binaries)
 roms/                       image/theme placeholder, no games or BIOS
 dtbTools/                   DTB inspection notes (sources external)
-build_image.sh              apply p3 bundle + optional rootfs overlay to a base image
+build_image.sh              build artifacts; optionally apply them to a base image
 ```
 
 ## Build
 
-### Boot bundle (p3 FAT, 99 MiB)
+The root `build_image.sh` is the only entry point. Artifact mode needs
+`mtools`, `dosfstools` and Python 3:
 
 ```bash
-./scripts/build_boot_bundle.sh ngp45ht     # -> out/DarkOS-ngp45ht-p3.img
-./scripts/build_boot_bundle.sh pocketais   # -> out/DarkOS-pocketais-p3.img
+./build_image.sh                    # both consoles -> out/
+./build_image.sh ngp45ht            # one console
+./build_image.sh --outdir dist      # custom output directory
 ```
+
+For each selected console it produces:
+
+| File | Content |
+| --- | --- |
+| `DarkOS-<device>-p3.img` | 99 MiB FAT boot partition |
+| `update-darkos-<device>.tar` | rootfs overlay |
+| `SHA256SUMS.txt` | hashes of the generated files |
+
+The two helpers can also be called directly:
+
+```bash
+./scripts/build_boot.sh ngp45ht [out.img]
+./scripts/build_overlay.py ngp45ht [out.tar]
+```
+
+### p3 boot partition
 
 The bundle contains `Image`, `uInitrd`, `extlinux/extlinux.conf`, the device
 DTB, firstboot/expansion scripts, `fstab.exfat` and battery bitmaps. Firmware
@@ -67,13 +85,8 @@ NGP45HT uses the fixed `ngp-expand.sh` (unmount before `mkfs`, byte-sized
 
 ### Rootfs overlay
 
-```bash
-./scripts/build_update_tar.sh ngp45ht     # -> out/update-darkos-ngp45ht.tar
-./scripts/build_update_tar.sh pocketais   # -> out/update-darkos-pocketais.tar
-```
-
 Extract on the target with `tar --numeric-owner -xf ... -C /`. The device
-overlay wins over `common`. Modes are assigned by `scripts/make_update_tar.py`
+overlay wins over `common`. Modes are assigned by `scripts/build_overlay.py`
 (shebang/ELF → 0755, `panel.conf` 0664, `led.conf` 0666, everything else 0644),
 because a Windows checkout cannot represent the executable bit. Entry mtimes
 are fixed (`SOURCE_DATE_EPOCH`, default 2026-01-01), so repeated overlay builds
@@ -83,25 +96,28 @@ so always distribute its SHA-256 from the build that produced it.
 The NGP45HT overlay ships prebuilt aarch64 `ngp-panel-gui`, `ngp-wifi-gui` and
 `ngp-led-off`, built from the C sources in `opt/ngp-panel/src`. It also installs
 `/usr/local/sbin/ngp45ht-update.sh`, which is called by `clone.sh` and by the
-NGP45HT `firstboot.sh` (so images with the overlay pre-applied also converge): it disables
-the replaced stock menu entries (`屏幕色温.sh`, `LED Settings.sh`, `网络信息.sh`,
-`Wifi.sh`), applies the Chinese menu rename, enables the panel/LED/WiFi/zram
-services, and runs `ngp-bootspeed-fix.sh`. `ws2812-common` is not shipped; the
-stick-LED service is only enabled when it already exists on the image.
+NGP45HT `firstboot.sh` (so images with the overlay pre-applied also converge):
+it disables the replaced stock menu entries (`屏幕色温.sh`, `LED Settings.sh`,
+`网络信息.sh`, `Wifi.sh`), applies the Chinese menu rename, enables the
+panel/LED/WiFi/zram services, and runs `ngp-bootspeed-fix.sh`.
+`ws2812-common` is not shipped; the stick-LED service is only enabled when it
+already exists on the image.
 
 ### Apply to a base image
 
+Full-image mode copies the base, writes p3 at 16 MiB and extracts the overlay
+into the BTRFS p4 at 116 MiB. It needs Linux, root, loop devices and BTRFS:
+
 ```bash
 # NGP45HT: keep the board U-Boot in p1/p2
-sudo ./build_image.sh <ngp45ht-base.img> ngp45ht --rootfs out-ngp45ht.img
+sudo ./build_image.sh ngp45ht --base ngp45ht-base.img
 
 # Pocket AIS: zero TF p1/p2/idbloader and repair the GPT for the eMMC U-Boot
-sudo ./build_image.sh <pocketais-base.img> pocketais --rootfs out-pocketais.img
+sudo ./build_image.sh pocketais --base pocketais-base.img --output out/pocketais.img
 ```
 
-`--rootfs` needs loop devices and BTRFS (Linux/WSL with `sudo`). The p3/p4
-offsets are 16 MiB and 116 MiB. For Pocket AIS the script zeroes sectors
-64–32767, then runs `fix_gpt_20261020.py` to restore the p1/p2 type GUIDs, the
+The base image is never modified. For Pocket AIS the script zeroes sectors
+64–32767, then runs `scripts/fix_gpt.py` to restore the p1/p2 type GUIDs, the
 p3 bootable attribute and both GPT CRCs. The base images' p5 is left as-is;
 the device firstboot/expand script handles `/roms`.
 
@@ -117,13 +133,20 @@ executable scripts and rejects credential-like files (`authorized_keys`,
 
 ## CI
 
-- [`.github/workflows/ci.yml`](.github/workflows/ci.yml): on push/PR, validates
-  the repository and builds the p3 boot bundle and rootfs overlay for both
-  consoles; uploads them as workflow artifacts.
-- [`.github/workflows/build-release.yml`](.github/workflows/build-release.yml):
-  manual `workflow_dispatch`; builds both devices and publishes the artifacts
-  to a `dArkOS4RK3562-YYYYMMDD` release. Full raw images are too large for
-  GitHub Actions; base images are external.
+[`.github/workflows/build.yml`](.github/workflows/build.yml) follows the
+`arkos4clone` release flow:
+
+1. `validate` checks the repository;
+2. `prepare` creates (or reuses) a **draft** release tagged
+   `dArkOS4RK3562-YYYYMMDD` (Asia/Shanghai);
+3. a matrix job runs `./build_image.sh <device> --outdir dist` for NGP45HT and
+   Pocket AIS and uploads the p3/overlay artifacts;
+4. `release` downloads both device sets, writes `SHA256SUMS.txt` and uploads
+   everything to the draft release with `gh release upload --clobber`.
+
+It runs on every push to `main` and on manual `workflow_dispatch`. Publish the
+draft from the GitHub UI when the assets look right. Full raw images are not
+built: base images are external and too large for the runner.
 
 ## Build inputs and sources
 

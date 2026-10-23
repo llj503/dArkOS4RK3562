@@ -1,0 +1,117 @@
+name: dArkOS4RK3562 build and release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: darkos4rk3562-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate repository
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            device-tree-compiler mtools dosfstools python3
+
+      - name: Validate
+        run: |
+          chmod +x build_image.sh scripts/*.sh
+          ./scripts/validate.sh
+
+  prepare:
+    name: Prepare draft release
+    needs: validate
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Create or reuse today's draft release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)
+          TAG="dArkOS4RK3562-$BUILD_DATE"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # A second run on the same day reuses the draft; uploads use --clobber.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists, reusing it"
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes "dArkOS4RK3562 boot partitions (p3) and rootfs overlays for NGP45HT and Pocket AIS. Base dArkOS images are external; see README.md. SHA256SUMS.txt is generated from the uploaded files." \
+              --draft=true
+          fi
+
+  build:
+    name: Build ${{ matrix.device }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [ ngp45ht, pocketais ]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mtools dosfstools python3
+
+      - name: Build p3 and rootfs overlay
+        run: |
+          chmod +x build_image.sh scripts/*.sh
+          ./build_image.sh "${{ matrix.device }}" --outdir dist
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dArkOS4RK3562-${{ matrix.device }}
+          path: |
+            dist/DarkOS-${{ matrix.device }}-p3.img
+            dist/update-darkos-${{ matrix.device }}.tar
+          if-no-files-found: error
+
+  release:
+    name: Upload to draft release
+    needs: [ prepare, build ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dArkOS4RK3562-*
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums and upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          cd dist
+          ls -lh
+          sha256sum ./*.img ./*.tar > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" ./* --clobber
