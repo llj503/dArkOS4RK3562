@@ -67,6 +67,22 @@ jobs:
               --draft=true
           fi
 
+      - name: Drop legacy update-package assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          # The release tag is date-based and reused; remove assets from older
+          # runs that are not system images (p3 partitions / overlay tars).
+          for name in $(gh release view "$TAG" --json assets --jq '.assets[].name'); do
+            case "$name" in
+              DarkOS-*-p3.img|update-darkos-*.tar|SHA256SUMS.txt)
+                echo "delete obsolete asset: $name"
+                gh release delete-asset "$TAG" "$name" --yes
+                ;;
+            esac
+          done
+
   ngp45ht:
     name: NGP45HT system image
     if: inputs.ngp45ht == true

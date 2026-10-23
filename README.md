@@ -124,9 +124,10 @@ executable scripts and rejects credential-like files (`authorized_keys`,
 [`.github/workflows/build.yml`](.github/workflows/build.yml) follows the
 `arkos4clone` release flow, for **system images only**:
 
-1. `guard` validates the repository, checks the selected devices and creates
-   (or reuses) a **draft** release tagged `dArkOS4RK3562-YYYYMMDD`
-   (Asia/Shanghai);
+1. `guard` validates the repository, checks the selected devices, creates (or
+   reuses) a **draft** release tagged `dArkOS4RK3562-YYYYMMDD` (Asia/Shanghai)
+   and deletes legacy p3/overlay assets from that tag, so the release stays
+   image-only;
 2. one job per selected device runs `./build_image.sh <device> --fetch-base`,
    compresses the raw image to `.img.xz`, splits it into `<2 GiB` parts and
    generates `SHA256SUMS-<device>.txt`;

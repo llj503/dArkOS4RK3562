@@ -14,7 +14,8 @@
 - `.github/workflows/build.yml` is manual (`workflow_dispatch`) with NGP45HT /
   Pocket AIS checkboxes: validate → create/reuse draft release → build each
   selected system image → xz/split into <2 GiB parts → upload only the image
-  parts and `SHA256SUMS-<device>.txt` (arkos4clone flow).
+  parts and `SHA256SUMS-<device>.txt` (arkos4clone flow). Reusing a date tag
+  also deletes legacy p3/overlay assets so the release stays image-only.
 
 ## 2026-10-23 — script cleanup
 
