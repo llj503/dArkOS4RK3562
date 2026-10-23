@@ -81,7 +81,8 @@ because a Windows checkout cannot represent the executable bit.
 
 The NGP45HT overlay ships prebuilt aarch64 `ngp-panel-gui`, `ngp-wifi-gui` and
 `ngp-led-off`, built from the C sources in `opt/ngp-panel/src`. It also installs
-`/usr/local/sbin/ngp45ht-update.sh`, which is called by `clone.sh`: it disables
+`/usr/local/sbin/ngp45ht-update.sh`, which is called by `clone.sh` and by the
+NGP45HT `firstboot.sh` (so images with the overlay pre-applied also converge): it disables
 the replaced stock menu entries (`屏幕色温.sh`, `LED Settings.sh`, `网络信息.sh`,
 `Wifi.sh`), applies the Chinese menu rename, enables the panel/LED/WiFi/zram
 services, and runs `ngp-bootspeed-fix.sh`. `ws2812-common` is not shipped; the

@@ -18,7 +18,9 @@
   `/opt/ngp-panel` (scripts + prebuilt aarch64 `ngp-panel-gui`,
   `ngp-wifi-gui`, `ngp-led-off`), LED helpers, panel/LED/WiFi services,
   `ngp-rompool.sh`, `ngp-bootspeed-fix.sh` and `ngp45ht-update.sh`.
-  `clone.sh` runs the update script before `firstboot.sh` (which reboots).
+  `clone.sh` runs the update script before `firstboot.sh` (which reboots);
+  the NGP45HT firstboot also calls it, so images with the overlay pre-applied
+  (no `clone.sh` run) still enable the services and disable replaced menus.
 - Removed the phantom `PARTLABEL=swap` line from both `fstab.exfat` files; it
   cost the full 90 s `DefaultDeviceTimeoutSec` at boot. NGP45HT gets zram
   swap instead via `ngp-bootspeed-fix.sh`.
