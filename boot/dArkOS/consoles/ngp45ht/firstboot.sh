@@ -1,7 +1,8 @@
 #!/bin/bash
 # NGP45HT: corrections applied before dArkOS's own first-boot expansion step.
-# This file is the byte-exact /boot/firstboot.sh of a shipped card
-# (see ngp45ht/README.md); keep it in sync when editing.
+# Based on the /boot/firstboot.sh of a shipped card.  The boot bundle adds an
+# overlay post-install hook so pre-applied rootfs overlays also converge; the
+# pristine card version is src/dArkOS/ngp45ht/boot/boot-firstboot.sh.
 #
 # Idempotent and safe to re-run.  Ordering is deliberate: systemd kills a
 # Type=oneshot unit after DefaultTimeoutStartSec (90 s) and the 2026-10-17
@@ -207,6 +208,16 @@ if [ ! -f "$HYG" ]; then
 	fi
 	[ -f "$HYG" ] || echo done > "$HYG" 2>/dev/null
 	say "hygiene marker: $([ -f "$HYG" ] && echo written || echo 'WRITE FAILED')"
+fi
+
+# --- device overlay post-install: services, menu, zram -------------------
+# The overlay tar can be pre-applied by build_image.sh, in which case clone.sh
+# never runs.  Enabling units and disabling the replaced menu entries belongs
+# here so any image with this rootfs converges on first boot.
+if [ -x /usr/local/sbin/ngp45ht-update.sh ]; then
+	say "running /usr/local/sbin/ngp45ht-update.sh"
+	/usr/local/sbin/ngp45ht-update.sh
+	say "ngp45ht-update.sh returned $?"
 fi
 
 # --- EASYROMS: give p5 the rest of the card, format exFAT, fill /roms ------
