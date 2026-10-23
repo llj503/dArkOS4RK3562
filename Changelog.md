@@ -3,7 +3,7 @@
 ## 2026-10-23 — system images only, no update packages
 
 - Renamed `scripts/build_boot_bundle.sh` → `scripts/build_boot.sh`,
-  `scripts/fix_gpt_20261020.py` → `scripts/fix_gpt.py`, and merged
+  `scripts/fix_gpt_20261020.py` → `scripts/fix_gpt.sh`, and merged
   `build_update_tar.sh` + `make_update_tar.py` into `scripts/build_overlay.py`.
 - Root `build_image.sh` now only builds a complete system image. Use
   `--base BASE.img` or `--fetch-base` (download/verify/unpack the published
@@ -11,6 +11,9 @@
   temporary intermediates and are not produced as deliverables.
 - Added `scripts/fetch_base.sh` for the split-xz base images (NGP45HT
   20261020, Pocket AIS 20261020), with release checksum verification.
+- GPT repair is now shell-only: `scripts/fix_gpt.sh` uses `sgdisk` to set the
+  Rockchip p1/p2 type GUIDs and the p3 bootable attribute, then verifies the
+  types and runs `sgdisk -v` for both GPT CRCs. No Python is involved.
 - `.github/workflows/build.yml` is manual (`workflow_dispatch`) with NGP45HT /
   Pocket AIS checkboxes: validate → create/reuse draft release → build each
   selected system image → xz/split into <2 GiB parts → upload only the image
@@ -28,7 +31,7 @@
   rootfs overlays, build scripts and CI. Kernel/DTS/GUI/EmulationStation sources
   stay in their owning projects (`llj503/kernel_rk3562` branch `ngp45ht`,
   `llj503/dArkOS_ngp45ht`, `llj503/dArkOS-PokectAis`, ES fcamod tree).
-- Moved the only build-time dependency on that tree, `fix_gpt.py`, to
+- Moved the only build-time dependency on that tree, `fix_gpt.sh`, to
   `scripts/`; `build_image.sh` now calls it there.
 - `validate.sh` no longer compiles source DTS or Python from `src/`; it
   decompiles the shipped DTBs and syntax-checks the build scripts only.

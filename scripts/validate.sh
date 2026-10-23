@@ -9,7 +9,7 @@ COMMON_KERNEL="$ROOT/boot/dArkOS/consoles/kernel/5.10"
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
 for f in "$ROOT/build_image.sh" "$ROOT/scripts/build_boot.sh" \
-         "$ROOT/scripts/build_overlay.py" "$ROOT/scripts/fix_gpt.py" \
+         "$ROOT/scripts/build_overlay.py" "$ROOT/scripts/fix_gpt.sh" \
          "$ROOT/scripts/fetch_base.sh"; do
     [ -f "$f" ] || fail "missing build entry point: $f"
 done

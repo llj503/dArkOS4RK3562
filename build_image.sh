@@ -65,7 +65,7 @@ esac
     exit 2
 }
 
-for c in mkfs.vfat mcopy python3 losetup mount tar sha256sum; do
+for c in mkfs.vfat mcopy python3 sgdisk losetup mount tar sha256sum; do
     command -v "$c" >/dev/null || { echo "missing tool: $c" >&2; exit 1; }
 done
 if [ "$FETCH" -eq 1 ]; then
@@ -118,7 +118,7 @@ dd if="$WORK/p3.img" of="$BUILD" bs=1M seek=16 conv=notrunc status=progress
 if [ "$DEV" = pocketais ]; then
     echo "zero idbloader/p1/p2 and repair GPT"
     dd if=/dev/zero of="$BUILD" bs=512 seek=64 count=32704 conv=notrunc status=none
-    python3 "$ROOT/scripts/fix_gpt.py" "$BUILD"
+    "$ROOT/scripts/fix_gpt.sh" "$BUILD"
 fi
 
 echo "extract rootfs overlay into p4"

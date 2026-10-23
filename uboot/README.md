@@ -76,7 +76,7 @@ card is payload only:
 - sectors 64–32767 (idbloader + p1/p2 areas) are zeroed;
 - the GPT keeps p1/p2 type GUIDs `a60b0000-…` (`uboot`) and `d46e0000-…`
   (`resource`), and p3 gets attribute `0x4` (bootable); both primary and backup
-  GPTs and their CRC32s are repaired by `scripts/fix_gpt.py`;
+  GPTs and their CRC32s are repaired by `scripts/fix_gpt.sh`;
 - the eMMC U-Boot then reads p3 `extlinux/extlinux.conf` and boots dArkOS.
 
 This is measured behaviour, not a guess: with distro `sgdisk` type GUIDs

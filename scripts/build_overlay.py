@@ -6,7 +6,7 @@ overlay plus the device overlay (device files win).  Modes are content-based so
 the result is identical on Windows and Linux; entry mtimes are fixed, so
 repeated builds are byte-identical.
 
-Usage: scripts/build_overlay.py <ngp45ht|pocketais> [out.tar]
+Usage: scripts/build_overlay.py <ngp45ht|pocketais> [rootfs.tar]
 """
 import hashlib
 import os
@@ -74,7 +74,7 @@ def main():
     if dev not in DEVICES:
         raise SystemExit(f"unknown device: {dev} (choose from {', '.join(DEVICES)})")
     out = sys.argv[2] if len(sys.argv) == 3 else os.path.join(
-        ROOT, "out", f"update-darkos-{dev}.tar")
+        ROOT, "out", f"rootfs-{dev}.tar")
 
     common = os.path.join(ROOT, "rootfs", "dArkOS", "common")
     device = os.path.join(ROOT, "rootfs", "dArkOS", dev)

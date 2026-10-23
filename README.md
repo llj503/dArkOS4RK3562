@@ -37,7 +37,7 @@ rootfs/dArkOS/
   common/                   shared scripts (perfmax/perfnorm, sleep, ngp-core-update)
   ngp45ht/                  AIC8800DC stack, panel/LED/network GUI, services
   pocketais/                Pocket AIS ES, theme, RA config, battery/USB/sleep scripts
-scripts/                    build_boot.sh, build_overlay.py, fix_gpt.py,
+scripts/                    build_boot.sh, build_overlay.py, fix_gpt.sh,
                             fetch_base.sh, validate.sh
 uboot/                      boot-chain notes (no U-Boot binaries)
 roms/                       image/theme placeholder, no games or BIOS
@@ -68,7 +68,7 @@ are about 4.2 GiB (NGP45HT) and 3.0 GiB (Pocket AIS).
 
 The builder writes p3 at 16 MiB and extracts the rootfs overlay into the BTRFS
 p4 at 116 MiB. For Pocket AIS it also zeroes sectors 64–32767 and runs
-`scripts/fix_gpt.py` to restore the Rockchip p1/p2 type GUIDs, the p3 bootable
+`scripts/fix_gpt.sh` to restore the Rockchip p1/p2 type GUIDs, the p3 bootable
 attribute and both GPT CRCs. The base images' p5 is left as-is; the device
 firstboot/expand script handles `/roms`.
 
@@ -78,7 +78,7 @@ built or published. For debugging, the helpers can still be called directly:
 
 ```bash
 ./scripts/build_boot.sh ngp45ht /tmp/p3.img
-./scripts/build_overlay.py ngp45ht /tmp/overlay.tar
+./scripts/build_overlay.py ngp45ht /tmp/rootfs.tar
 ```
 
 ### What goes into the image
