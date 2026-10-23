@@ -77,7 +77,10 @@ NGP45HT uses the fixed `ngp-expand.sh` (unmount before `mkfs`, byte-sized
 Extract on the target with `tar --numeric-owner -xf ... -C /`. The device
 overlay wins over `common`. Modes are assigned by `scripts/make_update_tar.py`
 (shebang/ELF → 0755, `panel.conf` 0664, `led.conf` 0666, everything else 0644),
-because a Windows checkout cannot represent the executable bit.
+because a Windows checkout cannot represent the executable bit. Entry mtimes
+are fixed (`SOURCE_DATE_EPOCH`, default 2026-01-01), so repeated overlay builds
+are byte-identical; the p3 FAT image still varies in volume serial/timestamps,
+so always distribute its SHA-256 from the build that produced it.
 
 The NGP45HT overlay ships prebuilt aarch64 `ngp-panel-gui`, `ngp-wifi-gui` and
 `ngp-led-off`, built from the C sources in `opt/ngp-panel/src`. It also installs

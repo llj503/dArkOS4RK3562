@@ -17,6 +17,10 @@ MODE_OVERRIDES = {
     "opt/ngp-panel/led.conf": 0o666,
 }
 
+# Reproducible archives: source mtimes differ between a Windows checkout, CI and
+# repeated builds.  Honour SOURCE_DATE_EPOCH when set, otherwise use a fixed date.
+EPOCH = int(os.environ.get("SOURCE_DATE_EPOCH", "1767225600"))
+
 
 def mode_for(rel, path):
     rel = rel.replace(os.sep, "/")
@@ -39,7 +43,7 @@ def add_tree(tar, base):
             info = tarfile.TarInfo(rel_root.replace(os.sep, "/"))
             info.type = tarfile.DIRTYPE
             info.mode = 0o755
-            info.mtime = int(os.stat(root).st_mtime)
+            info.mtime = EPOCH
             info.uid = info.gid = 0
             info.uname = info.gname = "root"
             tar.addfile(info)
@@ -47,6 +51,7 @@ def add_tree(tar, base):
             path = os.path.join(root, name)
             rel = os.path.relpath(path, base)
             info = tar.gettarinfo(path, arcname=rel.replace(os.sep, "/"))
+            info.mtime = EPOCH
             info.uid = info.gid = 0
             info.uname = info.gname = "root"
             if info.issym() or info.islnk():

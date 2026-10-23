@@ -25,7 +25,12 @@
   cost the full 90 s `DefaultDeviceTimeoutSec` at boot. NGP45HT gets zram
   swap instead via `ngp-bootspeed-fix.sh`.
 - Added `scripts/make_update_tar.py` so overlay modes are content-based and
-  identical on Windows and CI (a Windows checkout reports 0777 for everything).
+  identical on Windows and CI (a Windows checkout reports 0777 for everything),
+  with fixed entry mtimes for byte-identical repeated builds.
+- Local verification 2026-10-23: clean rebuild of both p3 bundles and both
+  overlays; p3 contents, extlinux FDT, kernel/initrd hashes and overlay
+  extraction checked; `build_image.sh --rootfs` exercised end-to-end on a
+  synthetic 512 MiB BTRFS base (p3 at 16 MiB, p4 at 116 MiB).
 - `build_boot_bundle.sh`/`validate.sh` treat `firmware/` and `modules/` as
   optional (Pocket AIS needs them on p3, NGP45HT keeps them in the rootfs).
 - Added CI: validation plus per-device p3/rootfs artifacts; a manual
