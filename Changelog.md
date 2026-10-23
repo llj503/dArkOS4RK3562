@@ -1,16 +1,26 @@
 # Changelog
 
+## 2026-10-23 — build-only cleanup
+
+- Removed `src/` from the repository. This repo now only carries boot payloads,
+  rootfs overlays, build scripts and CI. Kernel/DTS/GUI/EmulationStation sources
+  stay in their owning projects (`llj503/kernel_rk3562` branch `ngp45ht`,
+  `llj503/dArkOS_ngp45ht`, `llj503/dArkOS-PokectAis`, ES fcamod tree).
+- Moved the only build-time dependency on that tree, `fix_gpt_20261020.py`, to
+  `scripts/`; `build_image.sh` now calls it there.
+- `validate.sh` no longer compiles source DTS or Python from `src/`; it
+  decompiles the shipped DTBs and syntax-checks the build scripts only.
+
 ## 2026-10-23 — initial dArkOS4RK3562 layout
 
 - Repository laid out after `arkos4clone`: `boot/dArkOS/consoles/<device>`,
-  `rootfs/dArkOS/<device>`, `src/dArkOS/<device>`, `scripts/`, `uboot/`,
+  `rootfs/dArkOS/<device>`, `scripts/`, `uboot/`,
   `roms/`, `dtbTools/`, `build_image.sh`, `.github/workflows`.
 - Added two RK3562 consoles:
   - `ngp45ht` (XIFAN NGP45HT; AIC8800DC USB WiFi)
   - `pocketais` (Pocket AIS; AIC8800D80 SDIO WiFi)
-- Imported the NGP45HT boot payload, kernel patches, panel/WiFi GUI sources and
-  device scripts; imported the Pocket AIS boot payload, `ro520c` DTS, ES
-  patch, rootfs overlays and sanitized boot/settings.
+- Imported the NGP45HT boot payload and prebuilt device files; imported the
+  Pocket AIS boot payload, rootfs overlays and sanitized boot/settings.
 - NGP45HT boot bundle uses the fixed `firstboot.sh` + `ngp-expand.sh` (the p3
   copies from the 20261015 image still had the `exit 0` dead tail and the
   mkfs-before-umount / `-c 16K` bugs). `expandtoexfat.sh` is not used there.

@@ -22,3 +22,6 @@ ssh_host_*
 # Python caches
 __pycache__/
 *.pyc
+
+# Source trees are kept in their owning projects, never here
+/src/

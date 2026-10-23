@@ -2,7 +2,7 @@
 # NGP45HT: corrections applied before dArkOS's own first-boot expansion step.
 # Based on the /boot/firstboot.sh of a shipped card.  The boot bundle adds an
 # overlay post-install hook so pre-applied rootfs overlays also converge; the
-# pristine card version is src/dArkOS/ngp45ht/boot/boot-firstboot.sh.
+# pristine card version lives with the NGP45HT source project.
 #
 # Idempotent and safe to re-run.  Ordering is deliberate: systemd kills a
 # Type=oneshot unit after DefaultTimeoutStartSec (90 s) and the 2026-10-17

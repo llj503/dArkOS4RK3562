@@ -37,13 +37,11 @@ rootfs/dArkOS/
   common/                   shared scripts (perfmax/perfnorm, sleep, ngp-core-update)
   ngp45ht/                  AIC8800DC stack, panel/LED/network GUI, services
   pocketais/                Pocket AIS ES, theme, RA config, battery/USB/sleep scripts
-src/dArkOS/
-  ngp45ht/                  kernel patches, board DTS, panel/WiFi GUI C, tools
-  pocketais/                ro520c DTS, ES patch, image build and sanitize scripts
-scripts/                    build_boot_bundle.sh, build_update_tar.sh, validate.sh
+scripts/                    build_boot_bundle.sh, build_update_tar.sh,
+                            make_update_tar.py, fix_gpt_20261020.py, validate.sh
 uboot/                      boot-chain notes (no U-Boot binaries)
 roms/                       image/theme placeholder, no games or BIOS
-dtbTools/                   DTB source/compile notes
+dtbTools/                   DTB inspection notes (sources external)
 build_image.sh              apply p3 bundle + optional rootfs overlay to a base image
 ```
 
@@ -127,33 +125,31 @@ executable scripts and rejects credential-like files (`authorized_keys`,
   to a `dArkOS4RK3562-YYYYMMDD` release. Full raw images are too large for
   GitHub Actions; base images are external.
 
-## Source changes
+## Build inputs and sources
 
-### NGP45HT
+This repository is **build-only**: it carries the prebuilt boot payloads, rootfs
+overlays and the scripts/CI that assemble and release them. It deliberately has
+no kernel, DTS or EmulationStation source tree.
 
-- Kernel patches: `rk3562-joystick.c` per-axis inversion/GPIO triggers,
-  `rk3562-ngp45ht.dts` + DTS Makefile, `ngp45ht_defconfig`, `rk3562-darkos.dtsi`
-  labels.
-- Userland: panel/LED GUI (`ngp_panel_gui.c`), graphical WiFi/SSH
-  (`ngp_wifi_gui.c`), panel colour/BCSH, menu Chinese rename, arcade names/covers,
-  boot speed/zram, SSH always-on, firstboot/hygiene, PPSSPP audio/L2-R2.
-- Image tools: `fatpatch.py`, `install_wifi.sh`, `slimbuild.sh`,
-  `dtbrebuild.sh`, image clone/compare/verify.
-- The board image keeps its RKNS idbloader + patched vendor U-Boot in p1/p2.
+When a source change is needed, clone the owning project, build there, and drop
+the resulting `Image` / DTB / `.ko` / GUI binary into the matching `boot/` or
+`rootfs/` directory here:
 
-### Pocket AIS
+| Component | Source repository |
+| --- | --- |
+| RK3562 kernel, joystick driver, NGP45HT DTS/defconfig | `llj503/kernel_rk3562`, branch `ngp45ht` |
+| NGP45HT dArkOS board support, panel/WiFi GUI, tools | `llj503/dArkOS_ngp45ht` |
+| Pocket AIS dArkOS image/build work | `llj503/dArkOS-PokectAis` |
+| dArkOS / ArkOS base | upstream dArkOS/ArkOS trees |
+| EmulationStation fork | the fcamod-351v tree used for the AIS per-game menu |
 
-- `rk3562-ro520c.dtb` / `ro520c_aic.dts`: AIC8800D80 `wifi_chip_type`,
-  `a-key` → `b-key`, `left-stick-invert`.
-- EmulationStation source: six-file patch for the per-game EMULATOR/CORE menu,
-  default-emulator core list, network/panel script order and battery layout.
-- Rootfs: ES binary/theme/RA settings, battery status shim, USB role/charging,
-  sleep/backlight, `/roms` auto-expand, panel/network scripts.
-- Boot: Pocket AIS firstboot installs AIC8800D80 firmware/modules, enables SSH,
-  writes diagnostics; p1/p2/idbloader zero for the eMMC U-Boot.
+Device specifics kept here as build inputs:
 
-The base images and the complete upstream dArkOS trees are not vendored here;
-kernel patches, DTS and ES patches are in `src/dArkOS/`.
+- NGP45HT: `rk3562-ngp45ht.dtb`, fixed `firstboot.sh`/`ngp-expand.sh`,
+  AIC8800DC firmware and USB modules, panel/LED/WiFi binaries.
+- Pocket AIS: `rk3562-ro520c.dtb`, firstboot + AIC8800D80 firmware/modules on
+  p3, ES binary/theme/RA config in the rootfs overlay.
+- Both boot bundles use the same 5.10.226 `Image` and `uInitrd`.
 
 ## Credits
 

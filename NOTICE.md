@@ -7,12 +7,11 @@ The following components keep their original licenses/provenance:
 
 - **dArkOS / ArkOS** userland, scripts and boot files: GPL-2.0-or-later and the
   upstream dArkOS/ArkOS notices.
-- **Linux kernel and kernel patches** (`src/dArkOS/ngp45ht/kernel`): GPL-2.0.
-  The full kernel source is not vendored here; use the upstream
-  `llj503/kernel_rk3562` `ngp45ht` branch.
+- **Linux kernel** (`Image`, modules): GPL-2.0. The full kernel source is not
+  vendored here; use the upstream `llj503/kernel_rk3562` `ngp45ht` branch.
 - **EmulationStation** binary/resources: GPL-3.0-or-later (EmulationStation
-  fork used by dArkOS). The Pocket AIS source changes are shipped as a patch
-  under `src/dArkOS/pocketais/es`.
+  fork used by dArkOS). Source changes are maintained in the EmulationStation
+  fork, not in this repository.
 - **RetroArch** and libretro cores: their upstream licenses.
 - **AIC8800** kernel modules/firmware: vendor distribution, as shipped in the
   base dArkOS images; redistributed here only as the boot payload required by

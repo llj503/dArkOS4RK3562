@@ -50,7 +50,7 @@ dd if="$WORK/p3.img" of="$OUT" bs=1M seek="$P3_OFFSET_MIB" conv=notrunc status=p
 if [ "$DEV" = pocketais ]; then
     echo "== Pocket AIS: zero TF idbloader/p1/p2 and fix GPT =="
     dd if=/dev/zero of="$OUT" bs=512 seek=64 count=32704 conv=notrunc status=none
-    python3 "$ROOT/src/dArkOS/pocketais/image_build/fix_gpt_20261020.py" "$OUT"
+    python3 "$ROOT/scripts/fix_gpt_20261020.py" "$OUT"
 fi
 
 if [ "$ROOTFS" -eq 1 ]; then

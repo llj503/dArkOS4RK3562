@@ -1,9 +1,16 @@
 # docs
 
 - [Repository README](../README.md) — base images, layout, build and CI.
-- [NGP45HT source](../src/dArkOS/ngp45ht/README.md)
-- [Pocket AIS source](../src/dArkOS/pocketais/README.md)
 - [Component licenses](../NOTICE.md)
 
-The boot payloads are under `boot/dArkOS/consoles/`; the rootfs overlays are
-under `rootfs/dArkOS/`.  Base dArkOS images and user ROMs/BIOS are external.
+This repository is **build-only**: boot payloads under
+`boot/dArkOS/consoles/`, rootfs overlays under `rootfs/dArkOS/`, and the
+scripts/CI that assemble and release them. Kernel, DTS, panel GUI and
+EmulationStation sources live in their own projects:
+
+- `llj503/kernel_rk3562` (branch `ngp45ht`)
+- `llj503/dArkOS_ngp45ht`
+- `llj503/dArkOS-PokectAis`
+- the EmulationStation fcamod-351v tree
+
+Base dArkOS images and user ROMs/BIOS are external.
