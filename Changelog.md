@@ -1,17 +1,25 @@
 # Changelog
 
-## 2026-10-23 — single build entry point and release CI
+## 2026-10-23 — system images only, no update packages
 
 - Renamed `scripts/build_boot_bundle.sh` → `scripts/build_boot.sh`,
   `scripts/fix_gpt_20261020.py` → `scripts/fix_gpt.py`, and merged
   `build_update_tar.sh` + `make_update_tar.py` into `scripts/build_overlay.py`.
-- Root `build_image.sh` is the single entry point. With no arguments it builds
-  both consoles' p3 image, rootfs overlay and `SHA256SUMS.txt` under `out/`;
-  `--base` copies a base image and applies the artifacts to it.
-- Replaced the validate/build and release workflows with
-  `.github/workflows/build.yml`: validate → create/reuse a draft
-  `dArkOS4RK3562-YYYYMMDD` release → build both devices in a matrix → upload
-  the artifacts and generated `SHA256SUMS.txt` to the draft (arkos4clone flow).
+- Root `build_image.sh` now only builds a complete system image. Use
+  `--base BASE.img` or `--fetch-base` (download/verify/unpack the published
+  base); `--in-place` avoids copying the base. p3 and the rootfs overlay are
+  temporary intermediates and are not produced as deliverables.
+- Added `scripts/fetch_base.sh` for the split-xz base images (NGP45HT
+  20261020, Pocket AIS 20261020), with release checksum verification.
+- `.github/workflows/build.yml` is manual (`workflow_dispatch`) with NGP45HT /
+  Pocket AIS checkboxes: validate → create/reuse draft release → build each
+  selected system image → xz/split into <2 GiB parts → upload only the image
+  parts and `SHA256SUMS-<device>.txt` (arkos4clone flow).
+
+## 2026-10-23 — script cleanup
+
+- Consolidated the helper names and the single release workflow (superseded by
+  the system-image build above).
 
 ## 2026-10-23 — build-only cleanup
 

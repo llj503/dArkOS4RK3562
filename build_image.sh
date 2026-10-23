@@ -1,34 +1,32 @@
 #!/usr/bin/env bash
-# Single build entry point for the two RK3562 dArkOS consoles.
+# Build a complete, flashable dArkOS RK3562 system image.
 #
-# Artifact mode (default, no root needed):
-#   ./build_image.sh                      # both consoles
-#   ./build_image.sh ngp45ht pocketais    # explicit selection
-#   ./build_image.sh ngp45ht --outdir dist
+# Usage:
+#   sudo ./build_image.sh <ngp45ht|pocketais> --base BASE.img [--output OUT.img]
+#   sudo ./build_image.sh <ngp45ht|pocketais> --fetch-base [--output OUT.img]
 #
-# Produces:
-#   <outdir>/DarkOS-<device>-p3.img       99 MiB FAT boot partition
-#   <outdir>/update-darkos-<device>.tar   rootfs overlay
-#   <outdir>/SHA256SUMS.txt
+#   --base BASE.img   use an existing 12 GiB base image
+#   --fetch-base      download, verify and unpack the published base image
+#   --output OUT.img  output path (default: out/DarkOS4RK3562-<device>.img)
+#   --in-place        modify --base directly instead of copying it
+#   --outdir DIR      directory for downloaded bases and default output
 #
-# Full-image mode (Linux, root, one device):
-#   sudo ./build_image.sh pocketais --base base.img
-#   sudo ./build_image.sh ngp45ht --base base.img --output out.img
-#
-# The base image is copied first and only the copy is modified.  p3 is written
-# at 16 MiB; the overlay is extracted into the BTRFS p4 at
-# 116 MiB.  Pocket AIS additionally has sectors 64-32767 zeroed and its GPT
-# repaired (Rockchip p1/p2 types, p3 bootable flag, both CRCs).
+# The source base is never modified unless --in-place is given.  p3 is written
+# at 16 MiB and the rootfs overlay is extracted into the BTRFS p4 at 116 MiB.
+# Pocket AIS additionally has sectors 64-32767 zeroed and its GPT repaired.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-DEVICES=()
-OUTDIR="$ROOT/out"
+DEV=""
 BASE=""
 OUTPUT=""
+OUTDIR="$ROOT/out"
+FETCH=0
+IN_PLACE=0
+OUTPUT_GIVEN=0
 
 usage() {
-    sed -n "2,21p" "$0" | sed 's/^# \{0,1\}//'
+    sed -n "2,16p" "$0" | sed 's/^# \{0,1\}//'
     exit "${1:-0}"
 }
 
@@ -36,61 +34,65 @@ while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help) usage 0 ;;
         --base) BASE=${2:?--base needs an image path}; shift 2 ;;
-        --output) OUTPUT=${2:?--output needs a path}; shift 2 ;;
+        --fetch-base) FETCH=1; shift ;;
+        --output) OUTPUT=${2:?--output needs a path}; OUTPUT_GIVEN=1; shift 2 ;;
         --outdir) OUTDIR=${2:?--outdir needs a path}; shift 2 ;;
+        --in-place) IN_PLACE=1; shift ;;
         -*) echo "unknown option: $1" >&2; usage 1 ;;
-        *) DEVICES+=("$1"); shift ;;
+        *)
+            [ -z "$DEV" ] || { echo "one device per run" >&2; exit 2; }
+            DEV=$1; shift
+            ;;
     esac
 done
 
-[ "${#DEVICES[@]}" -gt 0 ] || DEVICES=(ngp45ht pocketais)
-for dev in "${DEVICES[@]}"; do
-    case "$dev" in
-        ngp45ht|pocketais) ;;
-        *) echo "unknown device: $dev" >&2; exit 2 ;;
-    esac
-done
+case "$DEV" in
+    ngp45ht|pocketais) ;;
+    *) echo "usage: $0 <ngp45ht|pocketais> (--base IMG | --fetch-base)" >&2; exit 2 ;;
+esac
 
-if [ -n "$BASE" ] && [ "${#DEVICES[@]}" -ne 1 ]; then
-    echo "--base builds one device at a time (got: ${DEVICES[*]})" >&2
+[ "$(id -u)" -eq 0 ] || { echo "building an image needs root (use sudo)" >&2; exit 1; }
+[ -n "$BASE" ] || [ "$FETCH" -eq 1 ] || {
+    echo "provide --base BASE.img or --fetch-base" >&2
     exit 2
+}
+[ -z "$BASE" ] || [ "$FETCH" -eq 0 ] || {
+    echo "--base and --fetch-base are mutually exclusive" >&2
+    exit 2
+}
+[ "$IN_PLACE" -eq 0 ] || [ "$FETCH" -eq 0 ] || {
+    echo "--in-place cannot be combined with --fetch-base (the download is disposable)" >&2
+    exit 2
+}
+
+for c in mkfs.vfat mcopy python3 losetup mount tar sha256sum; do
+    command -v "$c" >/dev/null || { echo "missing tool: $c" >&2; exit 1; }
+done
+if [ "$FETCH" -eq 1 ]; then
+    for c in curl xz; do
+        command -v "$c" >/dev/null || { echo "missing tool: $c" >&2; exit 1; }
+    done
 fi
 
 mkdir -p "$OUTDIR"
+OUTPUT=${OUTPUT:-"$OUTDIR/DarkOS4RK3562-${DEV}.img"}
 
-echo "== build artifacts =="
-BUILT=()
-for dev in "${DEVICES[@]}"; do
-    p3="$OUTDIR/DarkOS-${dev}-p3.img"
-    overlay="$OUTDIR/update-darkos-${dev}.tar"
-    "$ROOT/scripts/build_boot.sh" "$dev" "$p3"
-    python3 "$ROOT/scripts/build_overlay.py" "$dev" "$overlay"
-    BUILT+=("DarkOS-${dev}-p3.img" "update-darkos-${dev}.tar")
-done
-
-(
-    cd "$OUTDIR"
-    sha256sum "${BUILT[@]}" > SHA256SUMS.txt
-    echo "== checksums =="
-    cat SHA256SUMS.txt
-)
-
-if [ -z "$BASE" ]; then
-    echo "== done: $OUTDIR =="
-    exit 0
+if [ "$FETCH" -eq 1 ]; then
+    BASE="$OUTDIR/base-${DEV}.img"
+    "$ROOT/scripts/fetch_base.sh" "$DEV" "$BASE"
+    BUILD="$BASE"
+elif [ "$IN_PLACE" -eq 1 ]; then
+    if [ "$OUTPUT_GIVEN" -eq 1 ] && [ "$OUTPUT" != "$BASE" ]; then
+        echo "--in-place writes to $BASE; do not combine it with --output" >&2
+        exit 2
+    fi
+    OUTPUT="$BASE"
+    BUILD="$BASE"
+else
+    [ -f "$BASE" ] || { echo "base image not found: $BASE" >&2; exit 1; }
+    [ "$BASE" != "$OUTPUT" ] || { echo "output must differ from the base image" >&2; exit 1; }
+    BUILD="$OUTPUT"
 fi
-
-DEV=${DEVICES[0]}
-[ -f "$BASE" ] || { echo "base image not found: $BASE" >&2; exit 1; }
-[ "$(id -u)" -eq 0 ] || { echo "full-image mode needs root (use sudo)" >&2; exit 1; }
-for c in losetup mount tar; do
-    command -v "$c" >/dev/null || { echo "missing tool: $c" >&2; exit 1; }
-done
-
-P3="$OUTDIR/DarkOS-${DEV}-p3.img"
-OVERLAY="$OUTDIR/update-darkos-${DEV}.tar"
-OUT=${OUTPUT:-"$OUTDIR/DarkOS-${DEV}.img"}
-[ "$BASE" != "$OUT" ] || { echo "output must differ from the base image" >&2; exit 1; }
 
 WORK=$(mktemp -d)
 MNT="$WORK/p4"
@@ -101,24 +103,34 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "== full image: $DEV =="
-echo "copy: $BASE -> $OUT"
-cp --sparse=always "$BASE" "$OUT"
+echo "== build $DEV system image =="
+"$ROOT/scripts/build_boot.sh" "$DEV" "$WORK/p3.img"
+python3 "$ROOT/scripts/build_overlay.py" "$DEV" "$WORK/rootfs.tar"
+
+if [ "$FETCH" -eq 0 ] && [ "$IN_PLACE" -eq 0 ]; then
+    echo "copy base: $BASE -> $BUILD"
+    cp --sparse=always "$BASE" "$BUILD"
+fi
 
 echo "write p3 at 16 MiB"
-dd if="$P3" of="$OUT" bs=1M seek=16 conv=notrunc status=progress
+dd if="$WORK/p3.img" of="$BUILD" bs=1M seek=16 conv=notrunc status=progress
 
 if [ "$DEV" = pocketais ]; then
     echo "zero idbloader/p1/p2 and repair GPT"
-    dd if=/dev/zero of="$OUT" bs=512 seek=64 count=32704 conv=notrunc status=none
-    python3 "$ROOT/scripts/fix_gpt.py" "$OUT"
+    dd if=/dev/zero of="$BUILD" bs=512 seek=64 count=32704 conv=notrunc status=none
+    python3 "$ROOT/scripts/fix_gpt.py" "$BUILD"
 fi
 
 echo "extract rootfs overlay into p4"
-mount -t btrfs -o loop,rw,offset=121634816 "$OUT" "$MNT"
-tar --numeric-owner -xf "$OVERLAY" -C "$MNT"
+mount -t btrfs -o loop,rw,offset=121634816 "$BUILD" "$MNT"
+tar --numeric-owner -xf "$WORK/rootfs.tar" -C "$MNT"
 sync
 umount "$MNT"
 
-echo "image: $OUT"
-sha256sum "$OUT"
+if [ "$FETCH" -eq 1 ] && [ "$BUILD" != "$OUTPUT" ]; then
+    mv -f "$BUILD" "$OUTPUT"
+fi
+
+sync
+echo "system image: $OUTPUT"
+sha256sum "$OUTPUT"

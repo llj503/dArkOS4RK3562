@@ -1,9 +1,18 @@
-name: dArkOS4RK3562 build and release
+name: dArkOS4RK3562 system images
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      ngp45ht:
+        description: Build NGP45HT system image
+        required: false
+        type: boolean
+        default: true
+      pocketais:
+        description: Build Pocket AIS system image
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -13,28 +22,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  validate:
-    name: Validate repository
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-
-      - name: Install tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            device-tree-compiler mtools dosfstools python3
-
-      - name: Validate
-        run: |
-          chmod +x build_image.sh scripts/*.sh
-          ./scripts/validate.sh
-
-  prepare:
-    name: Prepare draft release
-    needs: validate
+  guard:
+    name: Validate and prepare draft release
     runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.release.outputs.tag }}
@@ -42,6 +31,24 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y device-tree-compiler mtools dosfstools python3
+
+      - name: At least one device selected
+        run: |
+          if [[ "${{ inputs.ngp45ht }}" != "true" && "${{ inputs.pocketais }}" != "true" ]]; then
+            echo "::error::select at least one device"
+            exit 1
+          fi
+          echo "NGP45HT=${{ inputs.ngp45ht }} PocketAIS=${{ inputs.pocketais }}"
+
+      - name: Validate repository
+        run: |
+          chmod +x build_image.sh scripts/*.sh
+          ./scripts/validate.sh
 
       - name: Create or reuse today's draft release
         id: release
@@ -51,68 +58,105 @@ jobs:
           BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)
           TAG="dArkOS4RK3562-$BUILD_DATE"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          # A second run on the same day reuses the draft; uploads use --clobber.
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "release $TAG already exists, reusing it"
           else
             gh release create "$TAG" \
               --title "$TAG" \
-              --notes "dArkOS4RK3562 boot partitions (p3) and rootfs overlays for NGP45HT and Pocket AIS. Base dArkOS images are external; see README.md. SHA256SUMS.txt is generated from the uploaded files." \
+              --notes "dArkOS4RK3562 flashable system images for NGP45HT and Pocket AIS. Each .img.xz is split into <2 GiB parts; concatenate the parts in order and verify with SHA256SUMS-<device>.txt." \
               --draft=true
           fi
 
-  build:
-    name: Build ${{ matrix.device }}
-    needs: prepare
+  ngp45ht:
+    name: NGP45HT system image
+    if: inputs.ngp45ht == true
+    needs: guard
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        device: [ ngp45ht, pocketais ]
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
 
-      - name: Install tools
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache /usr/share/swift /usr/local/.ghcup || true
+          df -h /
+
+      - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y mtools dosfstools python3
+          sudo apt-get install -y mtools dosfstools xz-utils python3
 
-      - name: Build p3 and rootfs overlay
+      - name: Build system image
         run: |
           chmod +x build_image.sh scripts/*.sh
-          ./build_image.sh "${{ matrix.device }}" --outdir dist
+          sudo ./build_image.sh ngp45ht --fetch-base \
+            --outdir "$GITHUB_WORKSPACE/work" \
+            --output "$GITHUB_WORKSPACE/ngp45ht.img"
+          ls -lh ngp45ht.img
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dArkOS4RK3562-${{ matrix.device }}
-          path: |
-            dist/DarkOS-${{ matrix.device }}-p3.img
-            dist/update-darkos-${{ matrix.device }}.tar
-          if-no-files-found: error
-
-  release:
-    name: Upload to draft release
-    needs: [ prepare, build ]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: dArkOS4RK3562-*
-          path: dist
-          merge-multiple: true
-
-      - name: Checksums and upload
+      - name: Compress, split, checksum and upload
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ needs.prepare.outputs.tag }}
+          TAG: ${{ needs.guard.outputs.tag }}
         run: |
-          cd dist
+          DATE=${TAG##*-}
+          NAME="dArkOS4RK3562-ngp45ht-${DATE}.img"
+          xz -T0 -6 -c ngp45ht.img > "${NAME}.xz"
+          rm -f ngp45ht.img
+          split -b 1900M -d -a 2 "${NAME}.xz" "${NAME}.xz.part-"
+          sha256sum "${NAME}.xz" > "SHA256SUMS-ngp45ht.txt"
+          sha256sum "${NAME}.xz".part-* >> "SHA256SUMS-ngp45ht.txt"
+          rm -f "${NAME}.xz"
           ls -lh
-          sha256sum ./*.img ./*.tar > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-          gh release upload "$TAG" ./* --repo "$GITHUB_REPOSITORY" --clobber
+          cat "SHA256SUMS-ngp45ht.txt"
+          gh release upload "$TAG" "${NAME}.xz".part-* "SHA256SUMS-ngp45ht.txt" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+  pocketais:
+    name: Pocket AIS system image
+    if: inputs.pocketais == true
+    needs: guard
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache /usr/share/swift /usr/local/.ghcup || true
+          df -h /
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mtools dosfstools xz-utils python3
+
+      - name: Build system image
+        run: |
+          chmod +x build_image.sh scripts/*.sh
+          sudo ./build_image.sh pocketais --fetch-base \
+            --outdir "$GITHUB_WORKSPACE/work" \
+            --output "$GITHUB_WORKSPACE/pocketais.img"
+          ls -lh pocketais.img
+
+      - name: Compress, split, checksum and upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.guard.outputs.tag }}
+        run: |
+          DATE=${TAG##*-}
+          NAME="dArkOS4RK3562-pocketais-${DATE}.img"
+          xz -T0 -6 -c pocketais.img > "${NAME}.xz"
+          rm -f pocketais.img
+          split -b 1900M -d -a 2 "${NAME}.xz" "${NAME}.xz.part-"
+          sha256sum "${NAME}.xz" > "SHA256SUMS-pocketais.txt"
+          sha256sum "${NAME}.xz".part-* >> "SHA256SUMS-pocketais.txt"
+          rm -f "${NAME}.xz"
+          ls -lh
+          cat "SHA256SUMS-pocketais.txt"
+          gh release upload "$TAG" "${NAME}.xz".part-* "SHA256SUMS-pocketais.txt" \
+            --repo "$GITHUB_REPOSITORY" --clobber
