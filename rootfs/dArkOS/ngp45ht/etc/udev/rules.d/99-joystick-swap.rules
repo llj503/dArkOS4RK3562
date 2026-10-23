@@ -1,0 +1,1 @@
+ACTION=="add", SUBSYSTEM=="platform", DRIVER=="rk3562-joystick", RUN+="/bin/sh -c 'test -f /home/ark/.config/.SWAP_START_HOME && echo 1 > /sys%p/swap_start_home'"

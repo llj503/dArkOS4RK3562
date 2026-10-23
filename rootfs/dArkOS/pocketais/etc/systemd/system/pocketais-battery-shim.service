@@ -1,0 +1,13 @@
+[Unit]
+Description=Pocket AIS battery status shim (fix RK817 fake Charging/Full)
+Before=emulationstation.service
+After=systemd-udevd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/pocketais-battery-shim
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

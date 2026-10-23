@@ -1,0 +1,11 @@
+[Unit]
+Description=Pocket AIS USB role watcher (charger -> peripheral, unplug -> host)
+After=pocketais-usb-role.service
+
+[Service]
+ExecStart=/usr/local/sbin/pocketais-usb-role-watch
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,212 @@
+#!/bin/bash
+#
+# First boot expansion script for RK3562 (RG52 Mini, RG43H/RG43V Pro)
+# Expands rootfs, converts ROMS partition to exfat, and (rg43h image only)
+# prompts for the RG43H/RG43V model to apply per-variant control deltas.
+#
+
+if mountpoint -q /roms; then
+  sudo umount /roms
+fi
+primary_block_partition=$(df -T | grep mmcblk[0-1]p4 | cut -d '/' -f 3 | cut -d ' ' -f 1)
+primary_block=${primary_block_partition:0:7}
+sudo ln -s /dev/${primary_block}p5 /dev/hda3
+sudo chmod 666 /dev/tty1
+export TERM=linux
+height="15"
+width="55"
+
+# RK3562 has a 720x1280 portrait display
+if compgen -G "/boot/rk3562*" > /dev/null; then
+  sudo setfont /usr/share/consolefonts/Lat7-TerminusBold28x14.psf.gz
+  height="20"
+  width="60"
+fi
+
+# --- RG43H Pro vs RG43V Pro model selection (rg43h image only) ---------------
+# The rg43h image ships for two near-identical devices: the RG43H Pro and the
+# RG43V Pro (extra FN button + opposite left-stick polarity). Ask once which
+# this is and apply the RG43V deltas. Gated on the rg43h hostname so the RG52
+# Mini (which shares this rk3562 expand script) is never prompted. There is no
+# passive way to tell the two boards apart, so we ask the user.
+if [ "$(cat /etc/hostname 2>/dev/null)" == "rg43h" ]; then
+  # The menu needs gamepad input, but the gamepad-to-keyboard layer (gptokeyb)
+  # is only ever spawned on-demand by EmulationStation's menus, and ES does not
+  # run during firstboot. So bring gptokeyb up ourselves the same way ES does
+  # (emulationstation.sh:21-33), run the menu, then kill it. /dev/uinput is
+  # always present (CONFIG_INPUT_UINPUT=y).
+  GPTOKEYB_PID=""
+  if [ -x /opt/inttools/gptokeyb ]; then
+    sudo chmod 666 /dev/uinput
+    export SDL_GAMECONTROLLERCONFIG_FILE="/opt/inttools/gamecontrollerdb.txt"
+    export DIALOGRC="/opt/inttools/noshadows.dialogrc"
+    /opt/inttools/gptokeyb -c "/opt/inttools/keys.gptk" > /dev/null 2>&1 &
+    GPTOKEYB_PID=$!
+    sleep 1   # let gptokeyb grab the pad and create its uinput keyboard
+  fi
+
+  # --timeout is a safety net: if gamepad input never arrives (gptokeyb failed
+  # and there is no USB keyboard), fall through to the safe RG43H default rather
+  # than hanging firstboot forever on a --no-cancel menu.
+  exec 3>&1
+  MODEL_SEL=$(dialog --backtitle "dArkOS first boot setup" --no-cancel --timeout 60 \
+    --default-item "H" \
+    --menu "Which model is this device?" 12 64 2 \
+    "H" "RG43H Pro (standard)" \
+    "V" "RG43V Pro (FN button + non-inverted stick)" \
+    2>&1 1>&3 </dev/tty1)
+  exec 3>&-
+
+  [ -n "$GPTOKEYB_PID" ] && kill "$GPTOKEYB_PID" 2>/dev/null
+  unset SDL_GAMECONTROLLERCONFIG_FILE DIALOGRC
+
+  if [ "$MODEL_SEL" == "V" ]; then
+    UCONF="/home/ark/.config"
+    # Record the variant (diagnostics / future runtime branching). We do NOT
+    # repurpose .DEVICE (it stays RG43H) because many scripts exact-match it.
+    sudo -u ark touch "$UCONF/.RG43V"
+    # 1. Left stick: disable inversion. The 99-joystick-invert udev rule reads
+    #    this marker when the driver registers on the post-firstboot reboot.
+    sudo -u ark touch "$UCONF/.LEFT_STICK_NOT_INVERTED"
+    # 2. Hotkey modifier SELECT (button 8) -> FN (button 10) in the configs that
+    #    hardcode the raw button. RetroArch 64 + 32, live + .bak:
+    for f in "$UCONF/retroarch/retroarch.cfg"   "$UCONF/retroarch/retroarch.cfg.bak" \
+             "$UCONF/retroarch32/retroarch.cfg" "$UCONF/retroarch32/retroarch.cfg.bak"; do
+      [ -f "$f" ] && sudo -u ark sed -i 's/input_enable_hotkey_btn = "8"/input_enable_hotkey_btn = "10"/' "$f"
+    done
+    # 3. Dolphin GCPad hotkey button:
+    DGC="/home/ark/.local/share/dolphin-emu/Config/GCPadNew.ini"
+    [ -f "$DGC" ] && sudo -u ark sed -i 's#Buttons/Hotkey = Button 8#Buttons/Hotkey = Button 10#' "$DGC"
+    # 4. mupen64plus hotkey combo modifier (Stop/Save/Load/Pause = J0B8/...):
+    MUP="$UCONF/mupen64plus/mupen64plus.cfg"
+    [ -f "$MUP" ] && sudo -u ark sed -i 's#J0B8/#J0B10/#g' "$MUP"
+    # PPSSPP pause is already R3 (10-107) on rg43h and R3 exists on the V too,
+    # so it needs no change. DuckStation (OpenPauseMenu=Guide) and flycast
+    # (runtime-generated mapping) also need nothing.
+    sync
+  fi
+fi
+
+dialog --infobox "EASYROMS partition expansion and conversion to exfat in process.  Please wait..." $height $width 2>&1 > /dev/tty1
+sleep 5
+
+(
+    maxSize=$(lsblk -b --output SIZE -n -d /dev/${primary_block})
+
+    newExtSizePct=$(printf %.2f "$((10**4 * 11000000000/$maxSize))e-4")
+    newExtSizePct=$(echo print 1-$newExtSizePct | perl)
+    ExfatPctToRemain=$(echo print 100*$newExtSizePct | perl)
+
+    # Expand the rootfs partition if possible to make room for future update needs
+    partition_type=$(df -T | grep mmcblk[0-1]p4 | cut -d ' ' -f 2)
+    if [ $ExfatPctToRemain -lt "100" ]; then
+      printf "d\n5\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
+      sudo growpart --free-percent=$ExfatPctToRemain -v /dev/${primary_block} 4 &> /dev/null
+      if [[ "$partition_type" == *"ext"* ]]; then
+        sudo resize2fs /dev/${primary_block}p4 &> /dev/null
+      elif [[ "$partition_type" == *"xfs"* ]]; then
+        sudo xfs_growfs /dev/${primary_block}p4 &> /dev/null
+      elif [[ "$partition_type" == *"btrfs"* ]]; then
+        sudo btrfs filesystem resize max / &> /dev/null
+      else
+        echo "Don't know how to grow a $partition_type file system."
+        echo ""
+      fi
+      echo 30
+      printf "n\n5\n\n\nt\n5\n11\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
+      echo 45
+    fi
+
+    sudo mkfs.exfat -c 16K -L EASYROMS /dev/hda3 &> /dev/null
+    exitcode=$?
+    echo $exitcode > /tmp/code.txt
+    sync
+    echo 50
+    sleep 2
+    sudo fsck.exfat -a /dev/hda3 &> /dev/null
+    sync
+    echo 55
+    sleep 2
+    sudo mount -t exfat -w /dev/${primary_block}p5 /roms &> /dev/null
+    sleep 2
+    (pv -n /roms.tar | tar --no-same-permissions --no-same-owner -xf - -C /) &> /tmp/tar_stat.txt &
+    let COUNT=1
+    while true; do
+      VAL=$(tail -n 1 /tmp/tar_stat.txt)
+      if [[ "$VAL" == "100" ]]; then
+       VAL_INT=$(awk "BEGIN {print ($VAL / 100) * 20 + 60}" 2> /dev/null | cut -d '.' -f1)
+       echo $VAL_INT
+       break
+      elif [[ "$VAL" != "$SAMEVAL" ]]; then
+       VAL_INT=$(awk "BEGIN {print ($VAL / 100) * 20 + 60}" 2> /dev/null | cut -d '.' -f1)
+       echo $VAL_INT
+       SAMEVAL="$VAL"
+       continue
+      elif [[ $COUNT -ge 10000 ]]; then
+       echo "We're failing out for creating roms structure."
+       break
+      else
+       let COUNT++
+       continue
+      fi
+    done
+    sync
+    reqSpace=1000000
+    availSpace=$(df "/roms" | awk 'NR==2 { print $4 }')
+    if (( availSpace < reqSpace )); then
+      sudo rm -rf /tempthemes/es-theme-epic-cody*/ &> /dev/null
+    fi
+    cd /tempthemes
+    (tar --no-same-permissions --no-same-owner -cf - . | pv -n -s $(du -sb /tempthemes/ | awk '{print $1}') | tar --no-same-permissions --no-same-owner -xf - -C /roms/themes/) &> /tmp/tar_stat.txt &
+    let COUNT=1
+    while true; do
+      VAL=$(tail -n 1 /tmp/tar_stat.txt)
+      if [[ "$VAL" -ge "100" ]]; then
+       VAL_INT_CP=$(awk "BEGIN {print ($VAL / 100) * 15 + 80}" 2> /dev/null | cut -d '.' -f1)
+       echo $VAL_INT_CP
+       break
+      elif [[ "$VAL" != "$SAMEVAL" ]] && [[ ! -z "$VAL" ]]; then
+       VAL_INT_CP=$(awk "BEGIN {print ($VAL / 100) * 15 + 80}" 2> /dev/null | cut -d '.' -f1)
+       echo $VAL_INT_CP
+       SAMEVAL="$VAL"
+       continue
+      elif [[ $COUNT -ge 10000 ]]; then
+       echo "We're failing out for copying themes."
+       break
+      else
+       let COUNT++
+       continue
+      fi
+    done
+    sync
+    sleep 1
+    cd ..
+    while true; do
+      if [[ -z $(pidof tar) ]]; then
+        sudo rm -rf /tempthemes &> /dev/null
+        break
+      fi
+    done
+    sleep 2
+    sudo umount /roms &> /dev/null
+    sudo cp -f /boot/fstab.exfat /etc/fstab &> /dev/null
+    sync
+    sudo rm -f /boot/doneit &> /dev/null
+    sudo rm -f /boot/fstab.exfat &> /dev/null
+    echo 100
+) | dialog --title "Firstboot setup of dArkOS" --gauge "Expanding rootfs and exfat partitions.  Please wait..." $height $width 0 2>&1 > /dev/tty1
+
+exitcode=$(cat /tmp/code.txt)
+if [ "$exitcode" == "0" ]; then
+  systemctl disable firstboot.service &> /dev/null
+  sudo rm /boot/firstboot.sh &> /dev/null
+  sudo rm -- "$0"
+  dialog --infobox "Completed expansion of root filesystem and EASYROMS partition and conversion to exfat. The system will now reboot and load dArkOS." $height $width 2>&1 > /dev/tty1 | sleep 10
+  reboot
+else
+  dialog --infobox "EASYROMS partition expansion and conversion to exfat failed for an unknown reason.  Please expand the partition using an alternative tool such as Minitool Partition Wizard.  System will reboot and load dArkOS now." $height $width 2>&1 > /dev/tty1 | sleep 10
+  systemctl disable firstboot.service &> /dev/null
+  sudo rm /boot/firstboot.sh &> /dev/null
+  sudo rm -- "$0"
+  reboot
+fi

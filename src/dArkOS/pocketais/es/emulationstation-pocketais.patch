@@ -1,0 +1,168 @@
+diff --git a/es-app/src/guis/GuiGamelistOptions.cpp b/es-app/src/guis/GuiGamelistOptions.cpp
+index c6310fe..9c227f5 100644
+--- a/es-app/src/guis/GuiGamelistOptions.cpp
++++ b/es-app/src/guis/GuiGamelistOptions.cpp
+@@ -330,6 +330,16 @@ GuiGamelistOptions::GuiGamelistOptions(Window* window, SystemData* system, bool
+ 
+ 	if (UIModeController::getInstance()->isUIModeFull() && !fromPlaceholder && !(mSystem->isCollection() && file->getType() == FOLDER) && !(system->getName() == "options"))
+ 	{
++		if (file->getType() != FOLDER)
++		{
++			std::string advancedTitle = std::string(_("EMULATOR")) + " / " + _("CORE");
++			row.elements.clear();
++			row.addElement(std::make_shared<TextComponent>(mWindow, advancedTitle, ThemeData::getMenuTheme()->Text.font, ThemeData::getMenuTheme()->Text.color), true);
++			row.addElement(makeArrow(mWindow), false);
++			row.makeAcceptInputHandler(std::bind(&GuiGamelistOptions::openAdvancedSettings, this));
++			mMenu.addRow(row);
++		}
++
+ 		row.elements.clear();
+ 		row.addElement(std::make_shared<TextComponent>(mWindow, _("EDIT THIS GAME'S METADATA"), ThemeData::getMenuTheme()->Text.font, ThemeData::getMenuTheme()->Text.color), true);
+ 		row.addElement(makeArrow(mWindow), false);
+@@ -531,6 +541,34 @@ void GuiGamelistOptions::openMetaDataEd()
+ 		std::bind(&IGameListView::onFileChanged, ViewController::get()->getGameListView(file->getSystem()).get(), file, FILE_METADATA_CHANGED), deleteBtnFunc, file));
+ }
+ 
++void GuiGamelistOptions::openAdvancedSettings()
++{
++	if (ThreadedScraper::isRunning())
++	{
++		mWindow->pushGui(new GuiMsgBox(mWindow, _("THIS FUNCTION IS DISABLED WHEN SCRAPING IS RUNNING")));
++		return;
++	}
++
++	FileData* file = getGamelist()->getCursor()->getSourceFileData();
++	if (!file || file->getType() == FOLDER)
++		return;
++
++	ScraperSearchParams p;
++	p.game = file;
++	p.system = file->getSystem();
++
++	std::vector<MetaDataDecl> advanced;
++	for (const auto& decl : file->getMetadata().getMDD())
++	{
++		if (decl.key == "emulator" || decl.key == "core" || decl.key == "governor")
++			advanced.push_back(decl);
++	}
++
++	std::string title = std::string(_("EMULATOR")) + " / " + _("CORE");
++	mWindow->pushGui(new GuiMetaDataEd(mWindow, &file->getMetadata(), advanced, p, Utils::FileSystem::getFileName(file->getPath()),
++		std::bind(&IGameListView::onFileChanged, ViewController::get()->getGameListView(file->getSystem()).get(), file, FILE_METADATA_CHANGED), nullptr, file, title));
++}
++
+ void GuiGamelistOptions::jumpToLetter()
+ {
+ 	std::string letter = mJumpToLetterList->getSelected();
+diff --git a/es-app/src/guis/GuiGamelistOptions.h b/es-app/src/guis/GuiGamelistOptions.h
+index 709e2df..dcf8248 100644
+--- a/es-app/src/guis/GuiGamelistOptions.h
++++ b/es-app/src/guis/GuiGamelistOptions.h
+@@ -30,6 +30,7 @@ private:
+ 	void addTextFilterToMenu();
+ 	void openGamelistFilter();
+ 	void openMetaDataEd();
++	void openAdvancedSettings();
+ 	void startEditMode();
+ 	void exitEditMode();
+ 	void jumpToLetter();
+diff --git a/es-app/src/guis/GuiMetaDataEd.cpp b/es-app/src/guis/GuiMetaDataEd.cpp
+index e477c0a..6a55f9f 100644
+--- a/es-app/src/guis/GuiMetaDataEd.cpp
++++ b/es-app/src/guis/GuiMetaDataEd.cpp
+@@ -22,7 +22,8 @@
+ #include "guis/GuiTextEditPopupKeyboard.h"
+ 
+ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, ScraperSearchParams scraperParams,
+-	const std::string& /*header*/, std::function<void()> saveCallback, std::function<void()> deleteFunc, FileData* file) : GuiComponent(window),
++	const std::string& /*header*/, std::function<void()> saveCallback, std::function<void()> deleteFunc, FileData* file,
++	const std::string& customTitle) : GuiComponent(window),
+ 	mScraperParams(scraperParams),
+ 
+ 	mBackground(window, ":/frame.png"),
+@@ -43,7 +44,8 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
+ 
+ 	mHeaderGrid = std::make_shared<ComponentGrid>(mWindow, Vector2i(1, 5));
+ 
+-	mTitle = std::make_shared<TextComponent>(mWindow, _("EDIT METADATA"), theme->Title.font, theme->Title.color, ALIGN_CENTER);
++	std::string title = customTitle.empty() ? std::string(_("EDIT METADATA")) : customTitle;
++	mTitle = std::make_shared<TextComponent>(mWindow, title, theme->Title.font, theme->Title.color, ALIGN_CENTER);
+ 	mSubtitle = std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(Utils::FileSystem::getFileName(scraperParams.game->getPath())),
+ 		theme->TextSmall.font, theme->TextSmall.color, ALIGN_CENTER);
+ 
+@@ -116,7 +118,10 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
+ 				else 
+ 					core_choice->add(_("DEFAULT")+" ("+ defaultCore+")", "", false);
+ 							
+-				std::vector<std::string> cores = system->getSystemEnvData()->getCores(emulatorName);				
++				std::string coresEmulator = emulatorName;
++				if (coresEmulator.empty())
++					coresEmulator = system->getSystemEnvData()->getDefaultEmulator();
++				std::vector<std::string> cores = system->getSystemEnvData()->getCores(coresEmulator);
+ 
+ 				bool found = false;
+ 
+diff --git a/es-app/src/guis/GuiMetaDataEd.h b/es-app/src/guis/GuiMetaDataEd.h
+index 8811236..9d5a8ab 100644
+--- a/es-app/src/guis/GuiMetaDataEd.h
++++ b/es-app/src/guis/GuiMetaDataEd.h
+@@ -19,7 +19,8 @@ class GuiMetaDataEd : public GuiComponent
+ {
+ public:
+ 	GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, ScraperSearchParams params, 
+-		const std::string& header, std::function<void()> savedCallback, std::function<void()> deleteFunc, FileData* file);
++		const std::string& header, std::function<void()> savedCallback, std::function<void()> deleteFunc, FileData* file,
++		const std::string& customTitle = "");
+ 	
+ 	bool input(InputConfig* config, Input input) override;
+ 	void onSizeChanged() override;
+diff --git a/es-app/src/guis/GuiTools.cpp b/es-app/src/guis/GuiTools.cpp
+index f212043..070db96 100644
+--- a/es-app/src/guis/GuiTools.cpp
++++ b/es-app/src/guis/GuiTools.cpp
+@@ -131,6 +131,21 @@ bool GuiTools::addScriptsToMenu(MenuComponent& menu, const std::string& folderPa
+             return Utils::String::toLower(a.first) < Utils::String::toLower(b.first);
+         });
+ 
++    // Pocket AIS: keep Network/Panel at the top of the script list.
++    auto scriptPriority = [](const std::string& path) {
++        const std::string fileName = Utils::FileSystem::getFileName(path);
++        if (fileName == "网络设置.sh")
++            return 0;
++        if (fileName == "面板调节.sh")
++            return 1;
++        return 2;
++    };
++    std::stable_sort(scripts.begin(), scripts.end(),
++        [&scriptPriority](const std::pair<std::string, std::string>& a,
++           const std::pair<std::string, std::string>& b) {
++            return scriptPriority(a.second) < scriptPriority(b.second);
++        });
++
+     // Add folder entries - capture only the pointer, not the whole vector
+     for (size_t i = 0; i < folders.size(); ++i)
+     {
+diff --git a/es-core/src/components/BatteryIndicatorComponent.cpp b/es-core/src/components/BatteryIndicatorComponent.cpp
+index f1a526b..b9a6c5e 100644
+--- a/es-core/src/components/BatteryIndicatorComponent.cpp
++++ b/es-core/src/components/BatteryIndicatorComponent.cpp
+@@ -14,7 +14,7 @@ void BatteryIndicatorComponent::init()
+ {
+ 	ControllerActivityComponent::init();
+ 
+-	mHorizontalAlignment = ALIGN_LEFT;
++	mHorizontalAlignment = Renderer::isSmallScreen() ? ALIGN_LEFT : ALIGN_RIGHT;
+ 
+ 	if (Renderer::isSmallScreen())
+ 	{
+@@ -23,8 +23,8 @@ void BatteryIndicatorComponent::init()
+ 	}
+ 	else
+ 	{
+-		setPosition(Renderer::getScreenWidth() * 0.955, Renderer::getScreenHeight() *0.0125);
+-		setSize(Renderer::getScreenWidth() * 0.033, Renderer::getScreenHeight() *0.033);
++		setPosition(Renderer::getScreenWidth() * 0.70, Renderer::getScreenHeight() * 0.0125);
++		setSize(Renderer::getScreenWidth() * 0.288, Renderer::getScreenHeight() * 0.033);
+ 	}
+ 
+ 	mView = ActivityView::BATTERY;

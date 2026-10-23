@@ -1,0 +1,1 @@
+ACTION=="add", SUBSYSTEM=="platform", DRIVER=="rk3562-joystick", RUN+="/bin/sh -c 'test -f /home/ark/.config/.LEFT_STICK_NOT_INVERTED && echo 0 > /sys%p/left_stick_invert'"

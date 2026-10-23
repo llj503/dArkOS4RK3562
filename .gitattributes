@@ -1,0 +1,11 @@
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.dts text
+*.md text
+*.bmp binary
+*.bin binary
+*.ko binary
+*.dtb binary
+*.ttc binary
+*.png binary

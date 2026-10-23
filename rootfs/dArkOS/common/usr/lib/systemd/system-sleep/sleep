@@ -1,0 +1,118 @@
+#!/bin/bash
+#
+# Sleep/wake script for RK3562 (RG52 Mini)
+# Handles suspend/resume for RK817 PMIC and peripherals
+#
+
+case $1 in
+   pre)
+    # Save current brightness and turn off backlight
+    echo $(cat /sys/class/backlight/backlight/brightness) | sudo tee /var/local/cur_bright.state
+    echo 0 | sudo tee /sys/class/backlight/backlight/brightness
+
+    # Check if EmulationStation is using too much CPU (stuck)
+    test=$(top -b -n 1 -d 0.2 -p $(pidof emulationstation) | tail -1 | awk '{print $9}')
+    if (( ${test%.*} > 100 )); then
+      systemctl stop emulationstation
+    fi
+
+    # Ensure Resume Path is enabled so RK817 codec restores audio on wake
+    amixer -q sset 'Resume Path' ON 2>/dev/null
+
+    # Save audio state
+    /usr/sbin/alsactl store -f /var/local/asound.state
+
+    # Set quick mode marker if applicable
+    if [ -f "/usr/local/bin/quickmode.sh" ]; then
+      touch /dev/shm/.JUSTWOKEUP
+    fi
+
+    # Check Bluetooth connection
+    sudo btconnected.sh check
+
+    # Save governor settings before sleep
+    sudo sleep_governors.sh SaveSettingsOnSleep
+
+    # Turn off power LEDs during sleep
+    # GPIO3_A0 (green) = bank 3 * 32 + pin 0 = 96
+    # GPIO3_A1 (red)   = bank 3 * 32 + pin 1 = 97
+    # U-Boot sets green=charged, red=charging; save state to restore on wake
+    for gpio in 96 97; do
+      if [ ! -d /sys/class/gpio/gpio${gpio} ]; then
+        echo ${gpio} > /sys/class/gpio/export 2>/dev/null
+        echo out > /sys/class/gpio/gpio${gpio}/direction 2>/dev/null
+      fi
+    done
+    cat /sys/class/gpio/gpio96/value > /var/local/led_green.state 2>/dev/null
+    cat /sys/class/gpio/gpio97/value > /var/local/led_red.state 2>/dev/null
+    echo 0 > /sys/class/gpio/gpio96/value 2>/dev/null
+    echo 0 > /sys/class/gpio/gpio97/value 2>/dev/null
+
+    # Power down the stick-RGB LED MCU during sleep (no-op unless configured)
+    [ -f /home/ark/.config/led.cfg ] && /usr/local/bin/ledctl suspend 2>/dev/null
+    ;;
+
+   post)
+    # Restore power LEDs after wake (saved state from pre-suspend)
+    # Re-ensure direction is "out" — GPIO controller may reset on resume
+    echo out > /sys/class/gpio/gpio96/direction 2>/dev/null
+    echo out > /sys/class/gpio/gpio97/direction 2>/dev/null
+    if [ -f /var/local/led_green.state ]; then
+      cat /var/local/led_green.state > /sys/class/gpio/gpio96/value 2>/dev/null
+    else
+      echo 1 > /sys/class/gpio/gpio96/value 2>/dev/null
+    fi
+    if [ -f /var/local/led_red.state ]; then
+      cat /var/local/led_red.state > /sys/class/gpio/gpio97/value 2>/dev/null
+    else
+      echo 0 > /sys/class/gpio/gpio97/value 2>/dev/null
+    fi
+
+    # Restore the stick-RGB LED state on wake (no-op unless configured)
+    [ -f /home/ark/.config/led.cfg ] && /usr/local/bin/ledctl apply 2>/dev/null
+
+    # Restore brightness; if the saved state is 0/missing (ES screensaver
+    # blanked the panel before suspend), fall back to a visible level.
+    br=$(cat /var/local/cur_bright.state 2>/dev/null || echo 0)
+    case "$br" in ''|*[!0-9]*) br=60 ;; esac
+    [ "$br" -lt 5 ] && br=60
+    echo "$br" | sudo tee /sys/class/backlight/backlight/brightness
+
+    # Restore governor settings
+    sudo sleep_governors.sh RestoreSettingsOnWake
+
+    # Restore audio state
+    sudo /usr/sbin/alsactl restore -f /var/local/asound.state
+
+    # Re-apply panel color-temperature LUT to VOP2 (CRTC state is reset
+    # across suspend; the gamma table loses its programming on resume).
+    # No-op on devices without panel-lut installed.
+    if [ -x /usr/local/bin/apply-panel-lut ] && [ -f /etc/panel-lut/current.lut ]; then
+      sudo /usr/local/bin/apply-panel-lut /etc/panel-lut/current.lut >/dev/null 2>&1 &
+    fi
+
+    # Restart EmulationStation if needed
+    if [ ! -f "/dev/shm/QBMODE" ]; then
+      systemctl is-active --quiet emulationstation.service && echo ok || systemctl start emulationstation
+    fi
+
+    sleep 2
+
+    # Restart Bluetooth services if active
+    systemctl is-active --quiet enable_bluetooth.service && sudo systemctl restart enable_bluetooth
+    systemctl is-active --quiet bluetooth.service && sudo systemctl restart bluetooth
+    systemctl is-active --quiet bluealsa.service && sudo systemctl restart bluealsa
+    systemctl is-active --quiet watchforbtaudio.service && sudo systemctl restart watchforbtaudio --no-block
+
+    # Auto-reconnect Bluetooth if configured
+    if [ -f "/var/local/btautoreconnect.state" ]; then
+      sleep 15
+      sudo btconnected.sh reconnect
+      sudo rm -f /var/local/btautoreconnect.state
+    fi
+
+    # Restart killer daemon if active
+    systemctl is-active --quiet killer_daemon && sudo systemctl restart killer_daemon
+    exit 0
+    ;;
+esac

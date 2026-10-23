@@ -1,0 +1,11 @@
+[Unit]
+Description=Pocket AIS: keep USB OTG in peripheral mode for charging
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'i=0; while [ $i -lt 50 ]; do [ -e /sys/devices/platform/ff740000.usb2-phy/otg_mode ] && { echo peripheral > /sys/devices/platform/ff740000.usb2-phy/otg_mode; exit 0; }; sleep 0.2; i=$((i+1)); done; exit 1'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

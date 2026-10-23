@@ -1,0 +1,13 @@
+[Unit]
+Description=Pocket AIS first-boot expand ROMS
+After=firstboot.service local-fs.target
+Before=emulationstation.service
+ConditionPathExists=!/boot/pocketais-autoexpand.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pocketais-autoexpand
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

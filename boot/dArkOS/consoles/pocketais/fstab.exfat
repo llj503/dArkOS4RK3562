@@ -1,0 +1,5 @@
+/dev/mmcblk1p4  /  btrfs defaults,noatime,compress=zstd:1,ssd_spread 0 0
+
+/dev/mmcblk1p3 /boot vfat defaults,noatime 0 0
+/dev/mmcblk1p5 /roms exfat defaults,auto,umask=000,uid=1000,gid=1000,noatime 0 0
+/roms/tools /opt/system/Tools none nofail,x-systemd.device-timeout=7,bind

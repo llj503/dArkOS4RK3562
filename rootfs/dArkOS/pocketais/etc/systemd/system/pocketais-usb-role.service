@@ -1,0 +1,10 @@
+[Unit]
+Description=Pocket AIS USB role: charge if charger present, otherwise host
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pocketais-usb-role-boot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

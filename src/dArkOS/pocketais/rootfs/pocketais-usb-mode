@@ -1,0 +1,24 @@
+#!/bin/sh
+M=/sys/devices/platform/ff740000.usb2-phy/otg_mode
+case "${1:-status}" in
+    charge|peripheral)
+        echo peripheral > "$M"
+        echo "USB role: peripheral (charging)"
+        ;;
+    host|otg)
+        echo otg > "$M"
+        echo "USB role: otg/host"
+        ;;
+    status)
+        echo "mode=$(cat "$M" 2>/dev/null)"
+        echo "extcon:"
+        cat /sys/class/extcon/extcon0/state 2>/dev/null
+        echo "ac_online=$(cat /sys/class/power_supply/ac/online 2>/dev/null)"
+        echo "battery_status=$(cat /sys/class/power_supply/battery/status 2>/dev/null)"
+        echo "battery_current=$(cat /sys/class/power_supply/battery/current_now 2>/dev/null)"
+        ;;
+    *)
+        echo "usage: $0 charge|host|status" >&2
+        exit 1
+        ;;
+esac

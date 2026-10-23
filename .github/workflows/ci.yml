@@ -1,0 +1,83 @@
+name: dArkOS4RK3562 CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate repository
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y device-tree-compiler mtools dosfstools shellcheck python3
+
+      - name: Validate
+        run: |
+          chmod +x scripts/*.sh build_image.sh
+          ./scripts/validate.sh
+
+  boot-bundles:
+    name: Boot bundle (${{ matrix.device }})
+    needs: validate
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [ ngp45ht, pocketais ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mtools dosfstools
+
+      - name: Build p3 FAT bundle
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/build_boot_bundle.sh "${{ matrix.device }}" \
+            "out/DarkOS-${{ matrix.device }}-p3.img"
+
+      - name: Upload boot bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: dArkOS-${{ matrix.device }}-p3
+          path: out/DarkOS-${{ matrix.device }}-p3.img
+          if-no-files-found: error
+
+  rootfs-overlays:
+    name: Rootfs overlay (${{ matrix.device }})
+    needs: validate
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [ ngp45ht, pocketais ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build update tar
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/build_update_tar.sh "${{ matrix.device }}" \
+            "out/update-darkos-${{ matrix.device }}.tar"
+
+      - name: Upload rootfs overlay
+        uses: actions/upload-artifact@v4
+        with:
+          name: dArkOS-${{ matrix.device }}-rootfs
+          path: out/update-darkos-${{ matrix.device }}.tar
+          if-no-files-found: error

@@ -1,0 +1,24 @@
+/out/
+*.img
+*.img.xz
+*.xz
+*.7z
+*.zip
+*.apk
+*.tar
+*.tar.gz
+*.tar.xz
+*.log
+.DS_Store
+
+# Never commit device credentials
+authorized_keys
+id_rsa*
+id_ed25519*
+ssh_host_*
+*.nmconnection
+.ssh/
+
+# Python caches
+__pycache__/
+*.pyc
