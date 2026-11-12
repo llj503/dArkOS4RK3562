@@ -1,0 +1,23 @@
+# Software Information
+display_name = "Nintendo - 3DS (Azahar)"
+authors = "azahar-emu"
+supported_extensions = "3ds|cci|cxi|app|cia|3dsx|zip|7z"
+corename = "Azahar"
+categories = "Emulator"
+license = "GPLv2+"
+permissions = ""
+
+# Hardware Information
+manufacturer = "Nintendo"
+systemname = "Nintendo 3DS"
+systemid = "3ds"
+
+# Libretro Features
+supports_no_game = "false"
+hw_render = "true"
+needs_fullpath = "true"
+savestate = "true"
+savestate_features = "serialized"
+cheats = "true"
+libretro_saves = "true"
+core_options = "true"

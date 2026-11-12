@@ -1,0 +1,1384 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Project-Id-Version: emulationstation\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Last-Translator: Sayadream0920\n"
+
+msgid "  GAME LOADING IMAGE"
+msgstr "  游戏加载画面"
+
+msgid "  Game Loading Image delay (secs)"
+msgstr "  游戏加载画面延迟（秒）"
+
+msgid " GAME"
+msgstr " 游戏"
+
+msgid " OF "
+msgstr " / "
+
+msgid "'%s' ADDED TO DOWNLOAD QUEUE"
+msgstr "已将 '%s' 加入下载队列"
+
+msgid "-NOT DEFINED-"
+msgstr "-未定义-"
+
+msgid "A,AN,THE"
+msgstr "冠词 (A,AN,THE)"
+
+msgid "ADD/REMOVE GAMES TO THIS GAME COLLECTION"
+msgstr "新增/移除游戏至此游戏收藏"
+
+msgid "ADVANCED SETTINGS"
+msgstr "进阶设定"
+
+msgid "ALPHABETICALLY"
+msgstr "依字母顺序"
+
+msgid "ALREADY TAKEN"
+msgstr "已被使用"
+
+msgid "ALT GR"
+msgstr "Alt Gr"
+
+msgid "AN ERROR HAS OCCURRED"
+msgstr "发生错误"
+
+msgid "AN ERROR OCCURRED"
+msgstr "发生了一个错误"
+
+msgid "API KEY"
+msgstr "API 密钥"
+
+msgid "APPLY FILTER"
+msgstr "应用过滤器"
+
+msgid "APPLY UPDATE"
+msgstr "应用更新"
+
+msgid "ARCADE SYSTEMS"
+msgstr "街机系统"
+
+msgid "ARE YOU SURE YOU WANT TO CHANGE THE UNDERVOLT VALUE? IF YES, SYSTEM WILL REBOOT AFTER THE CHANGE.  THIS CAN ALSO LEAD TO FAIL BOOTING OF YOUR DEVICE.  THIS CAN BE REVERTED BUT WILL REQUIRE ACCESS TO A COMPUTER WITH A SD CARD READER TO DO SO."
+msgstr "确定要修改欠压值吗？修改后系统会重启。这可能导致设备无法启动。可以恢复，但需要一台带读卡器的电脑来操作。"
+
+msgid "ARE YOU SURE YOU WANT TO CONFIGURE INPUT?"
+msgstr "您确定要设定输入吗？"
+
+msgid "ARE YOU SURE?"
+msgstr "确定吗？"
+
+msgid "ASCII"
+msgstr "ASCII"
+
+msgid "AUDIO CARD"
+msgstr "声卡"
+
+
+msgid "AUTO UPDATES"
+msgstr "自动更新"
+
+msgid "AUTOMATIC GAME COLLECTIONS"
+msgstr "自动游戏收藏"
+
+msgid "Added '%s' to '%s'"
+msgstr "已将 '%s' 加入 '%s'"
+
+msgid "All Games"
+msgstr "所有游戏"
+
+msgid "Auto Suspend Timeout (mins)"
+msgstr "自动休眠超时（分钟）"
+
+msgid "BACK"
+msgstr "返回"
+
+msgid "BAT"
+msgstr "电量"
+
+msgid "BATTERY THRESHOLD"
+msgstr "电量阈值"
+
+msgid "BOOT ON GAMELIST"
+msgstr "开机时显示游戏列表"
+
+msgid "BOX 2D"
+msgstr "2D 盒装"
+
+msgid "BOX 3D"
+msgstr "3D 盒装"
+
+msgid "BOX SOURCE"
+msgstr "盒装来源"
+
+msgid "BRIGHTNESS"
+msgstr "亮度"
+
+msgid "BRT"
+msgstr "亮度"
+
+msgid "BT"
+msgstr "蓝牙"
+
+msgid "BY HARDWARE TYPE"
+msgstr "依硬件类型"
+
+msgid "BY MANUFACTURER"
+msgstr "依制造商"
+
+msgid "BY RELEASE YEAR"
+msgstr "依发行年份"
+
+msgid "Battery Reading Mode"
+msgstr "电池读取模式"
+
+msgid "CANCEL"
+msgstr "取消"
+
+msgid "CAROUSEL TRANSITIONS"
+msgstr "轮播转场效果"
+
+msgid "CHANGE"
+msgstr "变更"
+
+msgid "CHOOSE"
+msgstr "选择"
+
+msgid "CLOSE"
+msgstr "关闭"
+
+msgid "COLLECTION"
+msgstr "收藏"
+
+msgid "COLLECTIONS"
+msgstr "收藏"
+
+msgid "COMPLETE QUIT MENU"
+msgstr "完整的离开菜单"
+
+msgid "CONFIGURATION"
+msgstr "设定"
+
+msgid "CONFIGURE INPUT"
+msgstr "设定输入"
+
+msgid "CONFIGURING"
+msgstr "设定中"
+
+msgid "CONNECTED"
+msgstr "已联机"
+
+msgid "CONNECTION FAILED"
+msgstr "连接失败"
+
+msgid "CORE"
+msgstr "核心"
+
+msgid "CPU Undervolt"
+msgstr "CPU 欠压"
+
+msgid "CREATE NEW CUSTOM COLLECTION"
+msgstr "建立新的自定义收藏"
+
+msgid "CREATE NEW CUSTOM COLLECTION FROM THEME"
+msgstr "从主题建立新的自定义收藏"
+
+msgid "CURRENT"
+msgstr "当前"
+
+msgid "CUSTOM GAME COLLECTIONS"
+msgstr "自定义游戏收藏"
+
+msgid "CUSTOM IMAGE DIR"
+msgstr "自定义图片目录"
+
+msgid "CUSTOM IMAGE DIR RECURSIVE"
+msgstr "自定义图片目录（递归）"
+
+msgid "CUSTOM IMAGE FILTER"
+msgstr "自定义图片过滤器"
+
+msgid "DATE FORMAT"
+msgstr "日期格式"
+
+msgid "DEFAULT"
+msgstr "默认"
+
+msgid "DEFAULT GRID SIZE"
+msgstr "默认网格大小"
+
+msgid "DELETE"
+msgstr "删除"
+
+msgid "DEVELOPER, ASCENDING"
+msgstr "开发商，递增"
+
+msgid "DEVELOPER, DESCENDING"
+msgstr "开发商，递减"
+
+msgid "DISPLAY"
+msgstr "显示"
+
+msgid "DISPLAY SETTINGS"
+msgstr "显示设置"
+
+msgid "DISPLAY SONG TITLES"
+msgstr "显示歌曲标题"
+
+msgid "DOWNLOADING"
+msgstr "下载中"
+
+msgid "DOWNLOADS AND UPDATES"
+msgstr "下载与更新"
+
+msgid "Default Emulator Governor"
+msgstr "默认模拟器调节模式"
+
+msgid "Developer"
+msgstr "开发商"
+
+msgid "Dim Red"
+msgstr "暗红"
+
+msgid "Distro Version"
+msgstr "系统版本"
+
+msgid "Do you want to proceed?"
+msgstr "是否继续？"
+
+msgid "Downloading"
+msgstr "下载中"
+
+msgid "EDIT"
+msgstr "编辑"
+
+msgid "EDIT METADATA"
+msgstr "编辑描述文件"
+
+msgid "EDIT THIS GAME'S METADATA"
+msgstr "编辑此游戏的描述文件"
+
+msgid "EMULATIONSTATION"
+msgstr "EMULATIONSTATION"
+
+msgid "EMULATOR"
+msgstr "模拟器"
+
+msgid "EMULATOR SETTINGS"
+msgstr "模拟器设定"
+
+msgid "ENABLE FILTERS"
+msgstr "启用过滤器"
+
+msgid "ENABLE NAVIGATION SOUNDS"
+msgstr "启用导航音效"
+
+msgid "ENABLE VIDEO AUDIO"
+msgstr "启用视频音效"
+
+msgid "ENABLE WIFI"
+msgstr "启用 Wi-Fi"
+
+msgid "EU"
+msgstr "EU"
+
+msgid "Editing the '%s' Collection. Add/remove games with Y."
+msgstr "正在编辑 '%s' 收藏。使用 Y 新增/移除游戏。"
+
+msgid "Extracting"
+msgstr "解压缩中"
+
+msgid "FAN CONTROL"
+msgstr "风扇控制"
+
+msgid "FAN SPEED"
+msgstr "风扇档位"
+
+msgid "FAVORITE"
+msgstr "我的最爱"
+
+msgid "FEMALE"
+msgstr "女声"
+
+msgid "FILE EXTENSIONS"
+msgstr "扩展名"
+
+msgid "FILENAME, ASCENDING"
+msgstr "文件名，递增"
+
+msgid "FILENAME, DESCENDING"
+msgstr "文件名，递减"
+
+msgid "FILTER"
+msgstr "过滤"
+
+msgid "FILTER GAMELIST BY"
+msgstr "过滤游戏列表："
+
+msgid "FILTER GAMES BY TEXT"
+msgstr "依文字过滤游戏"
+
+msgid "FINISH"
+msgstr "完成"
+
+msgid "FINISH EDITING"
+msgstr "完成编辑"
+
+msgid "FINISH EDITING COLLECTION"
+msgstr "完成编辑收藏"
+
+msgid "FLIP VOLUME BUTTONS"
+msgstr "交换音量键"
+
+msgid "FR"
+msgstr "FR"
+
+msgid "FRONTEND MUSIC"
+msgstr "前端背景音乐"
+
+msgid "Favorites"
+msgstr "我的最爱"
+
+msgid "Finished editing the '%s' Collection."
+msgstr "完成编辑 '%s' 收藏。"
+
+msgid "GAME "
+msgstr "游戏 "
+
+msgid "GAME COLLECTION SETTINGS"
+msgstr "游戏收藏设定"
+
+msgid "GAME LAUNCH TRANSITION"
+msgstr "游戏启动转场效果"
+
+msgid "GAME LOADING IMAGE MODE"
+msgstr "游戏加载图片模式"
+
+msgid "GAMELIST VIEW STYLE"
+msgstr "游戏列表查看样式"
+
+msgid "GENRE, ASCENDING"
+msgstr "游戏类型，递增"
+
+msgid "GENRE, DESCENDING"
+msgstr "游戏类型，递减"
+
+msgid "GIF"
+msgstr "GIF"
+
+msgid "GO TO DECADE"
+msgstr "跳至年代"
+
+msgid "GO TO HARDWARE"
+msgstr "跳至硬件"
+
+msgid "GO TO LETTER"
+msgstr "跳至字母"
+
+msgid "GO TO MANUFACTURER"
+msgstr "跳至制造商"
+
+msgid "GOVERNOR"
+msgstr "处理器调节模式"
+
+msgid "GRID SIZE"
+msgstr "网格大小"
+
+msgid "GROUP UNTHEMED CUSTOM COLLECTIONS"
+msgstr "将无主题的自定义收藏群组"
+
+msgid "GROUPED SYSTEMS"
+msgstr "群组化的系统"
+
+msgid "Game Loading Image"
+msgstr "游戏加载画面"
+
+msgid "Game Loading Image Delay (secs)"
+msgstr "游戏加载画面延迟（秒）"
+
+msgid "Genre"
+msgstr "游戏类型"
+
+msgid "Green"
+msgstr "绿色"
+
+msgid "HIDE SYSTEM VIEW"
+msgstr "隐藏系统查看"
+
+msgid "HIDE WHEN RUNNING GAME"
+msgstr "运行游戏时隐藏"
+
+msgid "HOLD A BUTTON ON YOUR DEVICE TO CONFIGURE IT."
+msgstr "按住您设备上的一个按钮来进行设定。"
+
+msgid "HOLD ANY BUTTON TO SKIP"
+msgstr "按住任何按钮跳过"
+
+msgid "ICON"
+msgstr "图示"
+
+msgid "ICON AND TEXT"
+msgstr "图标与文字"
+
+msgid "IF SYSTEM FAILS TO BOOT, JUST REMOVE THE .UNDERVOLT."
+msgstr "如果系统无法启动，只需删除 .UNDERVOLT 文件。"
+
+msgid "IF YOU DON'T HAVE VIDEOS, OR IF NONE OF THEM CAN BE PLAYED AFTER A FEW ATTEMPTS, IT WILL DEFAULT TO 'BLACK'."
+msgstr "如果没有视频，或多次尝试后仍无法播放，将默认使用\"黑色\"屏保。"
+
+msgid "IGNORE LEADING ARTICLES WHEN SORTING"
+msgstr "排序时忽略开头冠词"
+
+msgid "IMAGE"
+msgstr "图片"
+
+msgid "IMAGE SOURCE"
+msgstr "图片来源"
+
+msgid "INPUT"
+msgstr "输入"
+
+msgid "INPUT MANUALLY"
+msgstr "手动输入"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "JOYSTICK LED"
+msgstr "摇杆灯"
+
+msgid "JP"
+msgstr "JP"
+
+msgid "JUMP TO..."
+msgstr "跳至..."
+
+msgid "KODI MEDIA CENTER"
+msgstr "KODI 媒体中心"
+
+msgid "LANGUAGE"
+msgstr "语言"
+
+msgid "LAST PLAYED, ASCENDING"
+msgstr "上次游玩时间，递增"
+
+msgid "LAST PLAYED, DESCENDING"
+msgstr "上次游玩时间，递减"
+
+msgid "LAUNCH"
+msgstr "启动"
+
+msgid "LAUNCH SCREENSAVER"
+msgstr "启动屏幕保护程序"
+
+msgid "LED BRIGHTNESS"
+msgstr "LED 亮度"
+
+msgid "LED EFFECT"
+msgstr "LED 效果"
+
+msgid "LED LIGHTING"
+msgstr "LED 照明"
+
+msgid "LIGHT"
+msgstr "轻度"
+
+msgid "LOG LEVEL"
+msgstr "记录层级"
+
+msgid "LOGO SOURCE"
+msgstr "标志来源"
+
+msgid "LOWER MUSIC WHEN PLAYING VIDEO"
+msgstr "播放视频时降低音乐音量"
+
+msgid "Last played"
+msgstr "上次游玩时间"
+
+msgid "Loading theme..."
+msgstr "正在加载主题…"
+
+msgid "Loading..."
+msgstr "载入中..."
+
+msgid "MAIN MENU"
+msgstr "主菜单"
+
+msgid "MALE 1"
+msgstr "男声 1"
+
+msgid "MALE 2"
+msgstr "男声 2"
+
+msgid "MARQUEE"
+msgstr "跑马灯图示"
+
+msgid "MAXIMUM"
+msgstr "最大"
+
+msgid "MEDIUM"
+msgstr "中度"
+
+msgid "MENU"
+msgstr "菜单"
+
+msgid "MIX V1"
+msgstr "混合 V1"
+
+msgid "MIX V2"
+msgstr "混合 V2"
+
+msgid "MORE OPTIONS IN THE 'UI SETTINGS' -> 'VIDEO SCREENSAVER SETTINGS' MENU."
+msgstr "更多选项位于\"界面设置\"->\"视频屏保设置\"菜单。"
+
+msgid "MOVE CURSOR"
+msgstr "移动光标"
+
+msgid "NO"
+msgstr "否"
+
+msgid "NO GAMEPADS DETECTED"
+msgstr "未检测到游戏手把"
+
+msgid "NO GAMES FIT THAT CRITERIA."
+msgstr "没有符合条件的游戏。"
+
+msgid "NO GAMES FOUND - SKIP"
+msgstr "找不到游戏 - 跳过"
+
+msgid "NO GAMES WERE SCRAPED."
+msgstr "没有刮削到任何游戏。"
+
+msgid "NO UPDATE AVAILABLE"
+msgstr "没有可用的更新"
+
+msgid "NO WI-FI NETWORKS FOUND"
+msgstr "未找到 WIFI 网络"
+
+msgid "NONE"
+msgstr "无"
+
+msgid "NOT CONNECTED"
+msgstr "未联机"
+
+msgid "NUMBER PLAYERS, ASCENDING"
+msgstr "玩家人数，递增"
+
+msgid "NUMBER PLAYERS, DESCENDING"
+msgstr "玩家人数，递减"
+
+msgid "New Collection Name"
+msgstr "新收藏名称"
+
+msgid "No Entries Found"
+msgstr "找不到项目"
+
+msgid "None"
+msgstr "无"
+
+msgid "OFF"
+msgstr "关闭"
+
+msgid "OK"
+msgstr "确定"
+
+msgid "ON"
+msgstr "开启"
+
+msgid "ON-SCREEN HELP"
+msgstr "屏幕说明"
+
+msgid "ONLY PLAY SYSTEM-SPECIFIC MUSIC FOLDER"
+msgstr "仅播放特定系统的音乐文件夹"
+
+msgid "OPTIMIZE IMAGES VRAM USE"
+msgstr "优化图片 VRAM 使用"
+
+msgid "OPTIONAL RUMBLE MOTOR"
+msgstr "可选震动马达"
+
+msgid "OPTIONS"
+msgstr "选项"
+
+msgid "Off"
+msgstr "关闭"
+
+msgid "Only missing medias"
+msgstr "仅限缺少的媒体"
+
+msgid "PANEL BRIGHTNESS"
+msgstr "屏幕亮度"
+
+msgid "PANEL CONTRAST"
+msgstr "屏幕对比度"
+
+msgid "PANEL HUE"
+msgstr "屏幕色调"
+
+msgid "PANEL ID"
+msgstr "面板 ID"
+
+msgid "PANEL SATURATION"
+msgstr "屏幕饱和度"
+
+msgid "PANEL VERSION"
+msgstr "面板版本"
+
+msgid "PARSE GAMESLISTS ONLY"
+msgstr "仅解析游戏列表"
+
+msgid "PASSWORD"
+msgstr "密码"
+
+msgid "PIC"
+msgstr "PIC"
+
+msgid "PLAY THEME MUSICS"
+msgstr "播放主题音乐"
+
+msgid "POWER LED"
+msgstr "电源灯"
+
+msgid "POWER LED STATUS DURING SLEEP"
+msgstr "睡眠时的电源灯状态"
+
+msgid "PRELOAD UI"
+msgstr "预先加载UI"
+
+msgid "PRESS ANYTHING"
+msgstr "请按任意键"
+
+msgid "PRESS ESC TO CANCEL."
+msgstr "按 ESC 取消。"
+
+msgid "PRESS F4 TO QUIT AT ANY TIME."
+msgstr "随时按 F4 退出。"
+
+msgid "PUBLISHER, ASCENDING"
+msgstr "发行商，递增"
+
+msgid "PUBLISHER, DESCENDING"
+msgstr "发行商，递减"
+
+msgid "Players"
+msgstr "玩家人数"
+
+msgid "Power LED Status during Sleep"
+msgstr "睡眠时的电源灯状态"
+
+msgid "Preloading UI"
+msgstr "预先加载UI"
+
+msgid "Publisher"
+msgstr "发行商"
+
+msgid "QUICK SEARCH"
+msgstr "快速搜寻"
+
+msgid "QUICK SYSTEM SELECT"
+msgstr "快速系统选择"
+
+msgid "QUIT"
+msgstr "离开"
+
+msgid "QUIT EMULATIONSTATION"
+msgstr "离开 EmulationStation"
+
+msgid "RANDOM"
+msgstr "随机"
+
+msgid "RATING, ASCENDING"
+msgstr "评分，递增"
+
+msgid "RATING, DESCENDING"
+msgstr "评分，递减"
+
+msgid "REALLY QUIT?"
+msgstr "确定要离开？"
+
+msgid "REALLY RESTART?"
+msgstr "确定要重新启动？"
+
+msgid "REALLY SHUTDOWN?"
+msgstr "确定要关机？"
+
+msgid "REALLY UPDATE GAMES LISTS ?"
+msgstr "确定要更新游戏列表？"
+
+msgid "REFRESH"
+msgstr "重新整理"
+
+msgid "REGION SOURCE"
+msgstr "地区来源"
+
+msgid "RELEASE DATE, ASCENDING"
+msgstr "发行日期，递增"
+
+msgid "RELEASE DATE, DESCENDING"
+msgstr "发行日期，递减"
+
+msgid "REMOTE SERVICES"
+msgstr "远程服务"
+
+msgid "RESET"
+msgstr "重设"
+
+msgid "RESET ALL FILTERS"
+msgstr "重设所有过滤器"
+
+msgid "RESET FILE EXTENSIONS"
+msgstr "重设扩展名"
+
+msgid "RESET GAMELIST CUSTOMIZATIONS"
+msgstr "重设游戏列表自定义选项"
+
+msgid "RESTART EMULATIONSTATION"
+msgstr "重新启动 EmulationStation"
+
+msgid "RESTART EMULATIONSTATION TO APPLY"
+msgstr "重启 EmulationStation 生效"
+
+msgid "RESTART SYSTEM"
+msgstr "重新启动系统"
+
+msgid "RETRY"
+msgstr "重试"
+
+msgid "Rating"
+msgstr "评分"
+
+msgid "Red"
+msgstr "红色"
+
+msgid "Released"
+msgstr "发行日期"
+
+msgid "Removed '%s' from '%s'"
+msgstr "已从 '%s' 移除 '%s'"
+
+msgid "S "
+msgstr " 秒 "
+
+msgid "SAVE"
+msgstr "储存"
+
+msgid "SAVE CHANGES ?"
+msgstr "保存更改？"
+
+msgid "SAVE METADATA ON EXIT"
+msgstr "离开时储存描述文件"
+
+msgid "SAVING DATA. PLEASE WAIT..."
+msgstr "正在保存数据，请稍候…"
+
+msgid "SCRAPE"
+msgstr "搜刮资料"
+
+msgid "SCRAPE FAILED"
+msgstr "搜刮失败"
+
+msgid "SCRAPE FROM"
+msgstr "搜刮来源"
+
+msgid "SCRAPE NOW"
+msgstr "立即搜刮数据"
+
+msgid "SCRAPE RATINGS"
+msgstr "搜刮评分"
+
+msgid "SCRAPE THESE GAMES"
+msgstr "搜刮这些游戏的资料"
+
+msgid "SCRAPE THESE SYSTEMS"
+msgstr "搜刮这些系统的数据"
+
+msgid "SCRAPE VIDEOS"
+msgstr "搜刮视频"
+
+msgid "SCRAPER"
+msgstr "资料搜刮器"
+
+msgid "SCRAPING"
+msgstr "搜刮中"
+
+msgid "SCRAPING FINISHED. REFRESH UPDATE GAMES LISTS TO APPLY CHANGES."
+msgstr "搜刮完成。重新整理更新游戏列表以应用变更。"
+
+msgid "SCRAPING IN PROGRESS"
+msgstr "正在搜刮资料"
+
+msgid "SCRAPING IS RUNNING. DO YOU WANT TO STOP IT ?"
+msgstr "正在搜刮资料。您要停止吗？"
+
+msgid "SCREENSAVER AFTER"
+msgstr "屏幕保护程序启动于"
+
+msgid "SCREENSAVER BEHAVIOR"
+msgstr "屏幕保护程序行为"
+
+msgid "SCREENSAVER CONTROLS"
+msgstr "屏幕保护程控"
+
+msgid "SCREENSAVER SETTINGS"
+msgstr "屏幕保护程序设定"
+
+msgid "SCREENSHOT"
+msgstr "游戏截图"
+
+msgid "SEARCH"
+msgstr "搜寻"
+
+msgid "SEARCH FOR LOCAL ART"
+msgstr "搜寻本机美术图"
+
+msgid "SEARCHING"
+msgstr "搜寻中"
+
+msgid "SELECT"
+msgstr "选择"
+
+msgid "SELECT COLLECTIONS"
+msgstr "选择收藏"
+
+msgid "SELECT THEME FOLDER"
+msgstr "选择主题文件夹"
+
+msgid "SELECT THEME TO INSTALL"
+msgstr "选择要安装的主题"
+
+msgid "SHIFT"
+msgstr "Shift"
+
+msgid "SHIFTS FOR UPPER,LOWER, AND SPECIAL"
+msgstr "用于大写、小写和特殊符号的 Shift 键"
+
+msgid "SHOW BATTERY STATUS"
+msgstr "显示电池状态"
+
+msgid "SHOW CLOCK"
+msgstr "显示时钟"
+
+msgid "SHOW CLOCK IN 12-HOUR FORMAT"
+msgstr "以 12 小时格式显示时钟"
+
+msgid "SHOW DATE TIME"
+msgstr "显示日期时间"
+
+msgid "SHOW FAVORITES ON TOP"
+msgstr "将我的最爱显示在顶部"
+
+msgid "SHOW FILENAMES IN LISTS"
+msgstr "在列表中显示文件名"
+
+msgid "SHOW FOLDERS"
+msgstr "显示文件夹"
+
+msgid "SHOW FRAMERATE"
+msgstr "显示帧率"
+
+msgid "SHOW GAME INFO"
+msgstr "显示游戏信息"
+
+msgid "SHOW GAME INFO ON SCREENSAVER"
+msgstr "在屏幕保护程序显示游戏信息"
+
+msgid "SHOW HIDDEN FILES"
+msgstr "显示隐藏文件"
+
+msgid "SHOW NETWORK ICON"
+msgstr "显示网络图标"
+
+msgid "SHOW OVERLAY WHEN BRIGHTNESS CHANGES"
+msgstr "亮度变更时显示迭加图标"
+
+msgid "SHOW OVERLAY WHEN VOLUME CHANGES"
+msgstr "音量变更时显示迭加图标"
+
+msgid "SHOW SYSTEM NAME IN COLLECTIONS"
+msgstr "在收藏中显示系统名称"
+
+msgid "SHUTDOWN SYSTEM"
+msgstr "关闭系统"
+
+msgid "SKIP"
+msgstr "跳过"
+
+msgid "SKIPPED."
+msgstr "已跳过。"
+
+msgid "SLIDESHOW SCREENSAVER"
+msgstr "幻灯片秀屏幕保护程序"
+
+msgid "SLIDESHOW SCREENSAVER SETTINGS"
+msgstr "幻灯片秀屏幕保护程序设定"
+
+msgid "SND"
+msgstr "音量"
+
+msgid "SORT COLLECTIONS AND SYSTEMS"
+msgstr "排序收藏与系统"
+
+msgid "SORT GAMES BY"
+msgstr "排序游戏依据"
+
+msgid "SORT SYSTEMS"
+msgstr "排序系统"
+
+msgid "SOUND SETTINGS"
+msgstr "声音设定"
+
+msgid "SPACE"
+msgstr "空格键"
+
+msgid "SSID"
+msgstr "SSID"
+
+msgid "START"
+msgstr "开始"
+
+msgid "START ON SYSTEM"
+msgstr "启动时的系统"
+
+msgid "START UPDATE"
+msgstr "开始更新"
+
+msgid "STOCK"
+msgstr "原厂"
+
+msgid "STOP"
+msgstr "停止"
+
+msgid "STOP EDITING"
+msgstr "停止编辑"
+
+msgid "STRETCH IMAGES"
+msgstr "延展图片"
+
+msgid "STRETCH VIDEO ON SCREENSAVER"
+msgstr "在屏幕保护程序延展视频"
+
+msgid "SUCCESSFULLY SCRAPED!"
+msgstr "刮削成功！"
+
+msgid "SWAP IMAGE AFTER (SECS)"
+msgstr "交换图片于（秒）"
+
+msgid "SWAP VIDEO AFTER (SECS)"
+msgstr "交换视频于（秒）"
+
+msgid "SWITCH A/B BUTTONS IN EMULATIONSTATION"
+msgstr "在 EmulationStation前导界面中 交换 A/B 按钮"
+
+msgid "SWITCH POWER BUTTON TAP TO OFF"
+msgstr "切换电源按钮轻触为关机"
+
+msgid "SYSTEM"
+msgstr "系统"
+
+msgid "SYSTEM VOLUME"
+msgstr "系统音量"
+
+msgid "SYSTEM, ASCENDING"
+msgstr "系统，递增"
+
+msgid "SYSTEM, DESCENDING"
+msgstr "系统，递减"
+
+msgid "SYSTEMS"
+msgstr "系统"
+
+msgid "Scan Ports folder on boot"
+msgstr "开机时扫描 Ports 文件夹"
+
+msgid "Searching"
+msgstr "搜寻中"
+
+msgid "Show Kodi in Start Menu"
+msgstr "在开始菜单中显示 Kodi"
+
+msgid "Starting UI"
+msgstr "正在启动界面"
+
+msgid "THE 'RANDOM VIDEO' SCREENSAVER SHOWS VIDEOS FROM YOUR GAMELIST."
+msgstr "\"随机视频\"屏保会播放游戏列表中的视频。"
+
+msgid "THEME"
+msgstr "主题"
+
+msgid "THEME CONFIGURATION"
+msgstr "主题设定"
+
+msgid "THEME INSTALLED SUCCESSFULLY"
+msgstr "主题已成功安装"
+
+msgid "THEME INSTALLER"
+msgstr "主题安装器"
+
+msgid "THIS FUNCTION IS DISABLED WHEN SCRAPING IS RUNNING"
+msgstr "搜刮数据时此功能停用"
+
+msgid "THIS WILL DELETE THE ACTUAL GAME FILE(S)!"
+msgstr "这将删除实际的游戏文件！"
+
+msgid "THREADED LOADING"
+msgstr "多线程载入"
+
+msgid "THUMB"
+msgstr "缩略图"
+
+msgid "TIME FORMAT"
+msgstr "时间格式"
+
+msgid "TIMES PLAYED, ASCENDING"
+msgstr "游玩次数，递增"
+
+msgid "TIMES PLAYED, DESCENDING"
+msgstr "游玩次数，递减"
+
+msgid "TIMEZONE"
+msgstr "时区"
+
+msgid "TITLE SCREENSHOT"
+msgstr "标题画面截图"
+
+msgid "TRANSITION STYLE"
+msgstr "转场样式"
+
+msgid "This collection contains"
+msgstr "此收藏包含"
+
+msgid "This collection is empty."
+msgstr "此收藏是空的。"
+
+msgid "This will hide most menu-options to prevent changes to the system."
+msgstr "这会隐藏大部分菜单选项，以防止修改系统。"
+
+msgid "Times played"
+msgstr "游玩次数"
+
+msgid "To unlock and return to the full UI, enter this code:"
+msgstr "要解锁并返回完整界面，请输入此代码："
+
+msgid "UI MODE"
+msgstr "UI模式"
+
+msgid "UI SETTINGS"
+msgstr "UI设定"
+
+msgid "UPDATE GAMES LISTS"
+msgstr "更新游戏列表"
+
+msgid "UPDATE IS ALREADY RUNNING"
+msgstr "更新已在执行中"
+
+msgid "UPDATE IS READY"
+msgstr "更新已就绪"
+
+msgid "US"
+msgstr "US"
+
+msgid "USE CUSTOM IMAGES"
+msgstr "使用自定义图片"
+
+msgid "USE MARQUEE AS GAME INFO"
+msgstr "使用跑马灯图标作为游戏信息"
+
+msgid "USE OMX PLAYER FOR SCREENSAVER"
+msgstr "使用 OMX 播放器作为屏幕保护程序"
+
+msgid "USER DECIDES ON CONFLICTS"
+msgstr "由使用者决定冲突"
+
+msgid "USERNAME"
+msgstr "使用者名称"
+
+msgid "Unknown"
+msgstr "未知"
+
+msgid "VERBAL BATTERY VOICE"
+msgstr "电池语音提示"
+
+msgid "VERBAL BATTERY WARNING"
+msgstr "电池语音警告"
+
+msgid "VID"
+msgstr "视频"
+
+msgid "VIDEO SCREENSAVER"
+msgstr "视频屏幕保护程序"
+
+msgid "VIDEO SCREENSAVER SETTINGS"
+msgstr "视频屏幕保护程序设定"
+
+msgid "VIEW CUSTOMIZATION"
+msgstr "查看自定义"
+
+msgid "VISIBLE SYSTEMS"
+msgstr "可见系统"
+
+msgid "VRAM LIMIT"
+msgstr "VRAM 限制"
+
+msgid "VSYNC"
+msgstr "垂直同步"
+
+msgid "Various"
+msgstr "多个"
+
+msgid "Verbal BATTERY Voice"
+msgstr "语音电量播报"
+
+msgid "Verbal BATTERY Warning"
+msgstr "语音低电量警告"
+
+msgid "Verbal BATTERY Warning Threshold (%)"
+msgstr "语音低电量警告阈值（%）"
+
+msgid "WELCOME"
+msgstr "欢迎"
+
+msgid "WHEEL"
+msgstr "滚轮图示"
+
+msgid "WIFI"
+msgstr "WIFI"
+
+msgid "WIFI LIST"
+msgstr "WIFI 列表"
+
+msgid "WIFI SSID"
+msgstr "Wi-Fi SSID (网络名称)"
+
+msgid "WORKING..."
+msgstr "处理中..."
+
+msgid "YES"
+msgstr "是"
+
+msgid "YOU MUST APPLY THE THEME BEFORE EDIT CONFIGURATION"
+msgstr "您必须先应用主题才能编辑设定"
+
+msgid "You are changing the UI to a restricted mode:"
+msgstr "你正在把界面切换到受限模式："
+
+msgid "accept result"
+msgstr "接受结果"
+
+msgid "among other titles."
+msgstr "等游戏。"
+
+msgid "automatic"
+msgstr "自动"
+
+msgid "basic"
+msgstr "基本"
+
+msgid "dArkOS3562 SETTINGS"
+msgstr "dArkOS3562 设置"
+
+msgid "detailed"
+msgstr "详细"
+
+msgid "discard changes"
+msgstr "放弃更改"
+
+msgid "games, including"
+msgstr "款游戏，包括"
+
+msgid "go back"
+msgstr "返回"
+
+msgid "grid"
+msgstr "网格"
+
+msgid "never"
+msgstr "永不"
+
+msgid "search"
+msgstr "搜寻"
+
+msgid "unknown"
+msgstr "未知"
+
+msgid "video"
+msgstr "视频"
+
+msgid "POWER"
+msgstr "电量"
+
+msgid "STATUS"
+msgstr "状态"
+
+msgid "MODE"
+msgstr "模式"
+
+msgid "BATTERY INFO"
+msgstr "电池信息"
+
+msgid "BATTERY MODE"
+msgstr "电量读取模式"
+
+msgid "BATTERYPLUS"
+msgstr "电池增强"
+
+msgid "ENABLE BATTERYPLUS"
+msgstr "启用电池增强"
+
+msgid "BatteryPlus Mode"
+msgstr "BatteryPlus 模式"
+
+msgid "Driver Mode"
+msgstr "驱动模式"
+
+msgid "DELETE USAGE RECORDS"
+msgstr "清除使用记录"
+
+msgid "DELETE ALL BATTERY USAGE RECORDS? THIS WILL RESET CALIBRATION."
+msgstr "删除全部电池使用记录？这会重置校准。"
+
+msgid "RECORDS DELETED. SERVICE RESTARTED."
+msgstr "记录已删除，服务已重启。"
+
+msgid "JOYSTICK SETTINGS"
+msgstr "摇杆设置"
+
+msgid "DEAD ZONE VALUE"
+msgstr "死区数值"
+
+msgid "CUSTOM"
+msgstr "自定义"
+
+msgid "CUSTOM DEAD ZONE"
+msgstr "自定义死区"
+
+msgid "ENTER DEAD ZONE VALUE (10-1800)"
+msgstr "输入死区数值（10-1800）"
+
+msgid "VALUE OUT OF RANGE"
+msgstr "数值超出范围"
+
+msgid "SWAP A/B"
+msgstr "交换 A/B"
+
+msgid "SWAP X/Y"
+msgstr "交换 X/Y"
+
+msgid "LINEAR TRIGGERS"
+msgstr "线性扳机上报"
+
+msgid "JOYSTICK CALIBRATION"
+msgstr "摇杆校准"
+
+msgid "STEP 1: KEEP BOTH STICKS COMPLETELY STILL"
+msgstr "第一步：保持双摇杆完全静止"
+
+msgid "STEP 2: ROTATE BOTH STICKS FULL RANGE SLOWLY"
+msgstr "第二步：缓慢转动双摇杆到最大范围"
+
+msgid "PRESS OK TO START"
+msgstr "按 OK 开始"
+
+msgid "CENTER SAMPLING COMPLETE!"
+msgstr "中心采样完成！"
+
+msgid "PRESS OK TO START RANGE CALIBRATION"
+msgstr "按 OK 开始量程校准"
+
+msgid "CALIBRATION COMPLETE!"
+msgstr "校准完成！"
+
+msgid "PERFORMANCE SETTINGS"
+msgstr "性能设置"
+
+msgid "CPU MAX FREQ"
+msgstr "CPU 最高频率"
+
+msgid "CPU CORES"
+msgstr "CPU 核心数"
+
+msgid "GPU MAX FREQ"
+msgstr "GPU 最高频率"
+
+msgid "DMC MAX FREQ"
+msgstr "DMC 最高频率"
+
+msgid "AUTO"
+msgstr "自动"
+
+msgid "ZRAM SIZE"
+msgstr "ZRAM 大小"
+
+msgid "ZRAM ALGORITHM"
+msgstr "ZRAM 算法"
+
+msgid "ZRAM AUTO START"
+msgstr "开机自动 ZRAM"
+
+msgid "ZRAM"
+msgstr "ZRAM 内存压缩"
+
+msgid "Blue"
+msgstr "蓝色"
+
+msgid "Yellow"
+msgstr "黄色"
+
+msgid "Cyan"
+msgstr "青色"
+
+msgid "Magenta"
+msgstr "洋红"
+
+msgid "Rainbow"
+msgstr "彩虹"
+
+msgid "Joystick"
+msgstr "追光"
+
+msgid "Scrolling"
+msgstr "流光"
+
+msgid "Breathing"
+msgstr "呼吸"
+
+msgid "Breathing Red"
+msgstr "红色呼吸"
+
+msgid "Breathing Green"
+msgstr "绿色呼吸"
+
+msgid "Breathing Blue"
+msgstr "蓝色呼吸"
+
+msgid "Breathing Rainbow"
+msgstr "彩虹呼吸"
+
+msgid "Breathing Cycle"
+msgstr "循环呼吸"
+
+msgid "Red Green"
+msgstr "黄色"
+
+msgid "Green Blue"
+msgstr "青色"
+
+msgid "Blue Red"
+msgstr "洋红"
+
+msgid "Red Green Blue"
+msgstr "白色"
+
+msgid "Breathing Red Green Blue"
+msgstr "白色呼吸"
+
+msgid "Breathing Blue Red"
+msgstr "洋红呼吸"
+
+msgid "Breathing Green Blue"
+msgstr "青色呼吸"
+
+msgid "Breathing Red Green"
+msgstr "黄色呼吸"

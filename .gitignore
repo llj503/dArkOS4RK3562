@@ -1,0 +1,35 @@
+# 镜像与构建产物
+*.img
+*.img.xz
+*.img.7z*
+*.img.sha256
+mnt/
+mnt-base/
+
+# 本地分析/缓存/临时文件
+.probe/
+tmp_fc22
+es-orig.tar.gz
+firstboot-diag*.sh
+firstboot-glfix.sh
+*.Zone.Identifier
+*:Zone.Identifier
+
+# 用户数据 / 固件 / ROM
+固件/
+roms/
+突突兔*.zip
+SCPH1001.BIN
+
+# GitHub 单文件 100MB 限制 (同 arkos4clone 的做法):
+# 原始 .so 不入库, 仓库只存同名 .so.xz; CI 构建前 unxz 还原,
+# sync_image.sh 打包时排除 *.so.xz
+rootfs/home/ark/.config/retroarch/cores/mame2016_libretro.so
+rootfs/home/ark/.config/retroarch/cores/mame2015_libretro.so
+rootfs/home/ark/.config/retroarch32/cores/mame2016_libretro.so
+
+# 文档类: 基线镜像已自带, 不进差异层
+rootfs/usr/share/doc/
+rootfs/usr/share/man/
+rootfs/usr/share/lintian/
+rootfs/usr/share/bug/

@@ -1,0 +1,104 @@
+#!/bin/bash
+# fanctl -- pwm-fan 转速控制 (0-255)
+#   fanctl set N   手动转速, N = 1-255
+#   fanctl on      开启 (绑定驱动, 恢复温度自动控制)
+#   fanctl off     关闭 (PWM 0 + 解绑驱动, 兼容 .FAN_DISABLED 标记)
+#   fanctl apply   开机应用 /home/ark/.config/fan.cfg
+#   fanctl status  输出当前状态
+if [ ! -e /sys/devices/platform/pwm-fan ]; then
+	[ "$1" = "status" ] && echo "MODE=none"
+	echo none
+	exit 0
+fi
+
+DRV=/sys/bus/platform/drivers/pwm-fan
+CFG=/home/ark/.config/fan.cfg
+FLAG=/home/ark/.config/.FAN_DISABLED
+
+MODE=auto
+PWM=0
+# shellcheck source=/dev/null
+[ -f "$CFG" ] && . "$CFG"
+
+find_pwm() {
+	local p
+	for p in /sys/devices/platform/pwm-fan/hwmon/hwmon*/pwm1; do
+		[ -e "$p" ] && { echo "$p"; return 0; }
+	done
+	return 1
+}
+
+bound() { [ -e /sys/devices/platform/pwm-fan/driver ]; }
+
+bind_drv() {
+	bound && return 0
+	[ -w "$DRV/bind" ] && echo pwm-fan > "$DRV/bind" 2>/dev/null
+	sleep 0.2
+	bound
+}
+
+unbind_drv() {
+	local d n
+	for d in "$DRV"/*; do
+		[ -L "$d" ] || continue
+		n=$(basename "$d")
+		case "$n" in bind|unbind|uevent|module|drivers) continue ;; esac
+		echo "$n" > "$DRV/unbind" 2>/dev/null
+	done
+}
+
+set_pwm() {
+	local p
+	p=$(find_pwm) || return 1
+	printf '%s' "$1" > "$p" 2>/dev/null
+}
+
+save() {
+	mkdir -p "$(dirname "$CFG")"
+	printf 'MODE=%s\nPWM=%s\n' "$MODE" "$PWM" > "$CFG"
+	chown ark:ark "$CFG" 2>/dev/null
+}
+
+case "$1" in
+	set)
+		N="${2:-}"
+		case "$N" in ''|*[!0-9]*) echo "usage: fanctl set <1-255>" >&2; exit 2 ;; esac
+		if [ "$N" -lt 1 ] || [ "$N" -gt 255 ]; then
+			echo "fanctl: speed must be 1-255" >&2
+			exit 2
+		fi
+		MODE=manual; PWM="$N"; save
+		rm -f "$FLAG"
+		bind_drv || { echo "fanctl: pwm-fan bind failed" >&2; exit 1; }
+		set_pwm "$N"
+		;;
+	on)
+		MODE=auto; PWM=0; save
+		rm -f "$FLAG"
+		bind_drv || { echo "fanctl: pwm-fan bind failed" >&2; exit 1; }
+		set_pwm 0
+		;;
+	off)
+		MODE=off; PWM=0; save
+		touch "$FLAG"
+		set_pwm 0
+		unbind_drv
+		;;
+	apply)
+		case "$MODE" in
+			off)    touch "$FLAG"; set_pwm 0; unbind_drv ;;
+			manual) rm -f "$FLAG"; bind_drv && set_pwm "$PWM" ;;
+			*)      rm -f "$FLAG"; bind_drv && set_pwm 0 ;;
+		esac
+		;;
+	status)
+		printf 'MODE=%s PWM=%s bound=%s pwm1=%s\n' "$MODE" "$PWM" \
+			"$(bound && echo yes || echo no)" \
+			"$(cat "$(find_pwm)" 2>/dev/null || echo n/a)"
+		;;
+	*)
+		echo "usage: fanctl {set N|on|off|apply|status}" >&2
+		exit 2
+		;;
+esac
+exit 0

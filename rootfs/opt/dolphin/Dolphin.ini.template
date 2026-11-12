@@ -1,0 +1,11 @@
+[Core]
+GFXBackend = Vulkan
+CPUCore = 4
+CPUThread = True
+DSPThread = True
+SlotA = 1
+[Display]
+Fullscreen = True
+[DSP]
+Backend = ALSA
+[Interface]

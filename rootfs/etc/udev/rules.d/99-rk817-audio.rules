@@ -1,0 +1,2 @@
+# RK817 耳机插拔 → 切换播放路径 (SPK/HP), 否则功放/耳放状态与路径不一致导致无声
+SUBSYSTEM=="extcon", ACTION=="change", RUN+="/usr/local/bin/rk817-audio-path.sh"

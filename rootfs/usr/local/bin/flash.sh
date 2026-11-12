@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd /opt/rufflesa
+
+# 手柄配置
+sdl_controllerconfig="190000004b4800000011000000010000,GO-Super Gamepad,x:b2,a:b1,b:b0,y:b3,back:b12,start:b13,dpleft:b10,dpdown:b9,dpright:b11,dpup:b8,leftshoulder:b4,lefttrigger:b6,rightshoulder:b5,righttrigger:b7,leftstick:b14,rightstick:b15,leftx:a0,lefty:a1,rightx:a2,righty:a3,platform:Linux,"
+
+echo "VAR=rufflesa" > /home/ark/.config/KILLIT
+sudo systemctl restart killer_daemon.service
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./rufflesa "$1" -Q low
+RC=$?
+sudo systemctl stop killer_daemon.service
+exit $RC

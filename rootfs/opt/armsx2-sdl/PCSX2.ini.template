@@ -1,0 +1,35 @@
+# dArkOS3562 ARMSX2 (PS2) 默认配置 — 首次启动由 ps2.sh 拷贝
+# Renderer=14 = Vulkan (VK_KHR_display 直连 KMS/DRM, 无需 X/Wayland)
+# 路径相对 DataRoot (HOME=/roms/ps2/armsx2), BIOS 在 /roms/bios
+[Folders]
+Bios = /roms/bios
+Snapshots = snaps
+Savestates = sstates
+MemoryCards = memcards
+Logs = logs
+Cheats = cheats
+Patches = patches
+Cache = cache
+Textures = textures
+InputProfiles = inputprofiles
+
+[EmuCore/GS]
+Renderer = 14
+Vsync = false
+OsdShowSpeed = false
+OsdShowFPS = false
+
+[EmuCore]
+EnableWideScreenPatches = true
+EnableNoInterlacingPatches = true
+FastBoot = true
+
+[UI]
+Language = en-US
+
+[InputSources]
+SDL = true
+SDLControllerEnhancedMode = true
+
+[Filenames]
+; BIOS 由 [Folders] Bios 目录自动扫描

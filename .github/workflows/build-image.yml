@@ -1,0 +1,182 @@
+name: dArkOS3562 镜像构建
+
+# 参考 arkos4clone/.github/workflows/build-ci.yml:
+#   - 手动触发, 勾选“发布”时创建 draft Release 并上传产物
+#   - 基线镜像不进仓库, 由 DARKOS_BASE_URL 指定的 Release/对象存储下载
+#   - 产物 xz 压缩, 超过 1900MiB 自动 7z 分卷 (GitHub Release 单文件 2GB 限制)
+#
+# 仓库需要配置 (Settings → Secrets and variables → Actions → Variables):
+#   DARKOS_BASE_URL = 基线镜像下载地址 (支持 .7z.001 分卷 / .7z / .img.xz / .img)
+# 也可以每次手动在 base_url 输入框里覆盖。
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: '基线镜像 URL (留空使用仓库变量 DARKOS_BASE_URL)'
+        required: false
+        type: string
+      publish:
+        description: '创建 draft Release 并上传镜像'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: darkos3562-image
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: 准备发布信息
+    runs-on: ubuntu-24.04
+    outputs:
+      build_date: ${{ steps.date.outputs.build_date }}
+    steps:
+      - name: 计算构建日期并创建 draft Release
+        id: date
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)
+          echo "build_date=$BUILD_DATE" >> "$GITHUB_OUTPUT"
+          if [[ "${{ inputs.publish }}" != "true" ]]; then
+            echo "publish=false, 跳过 Release"
+            exit 0
+          fi
+          TAG="dArkOS-${BUILD_DATE}"
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release $TAG 已存在，复用"
+          else
+            gh release create "$TAG" --repo "$REPO" \
+              --title "dArkOS3562-${BUILD_DATE}" \
+              --notes "dArkOS RK3562 构建产物 ${BUILD_DATE}" \
+              --draft=true
+          fi
+
+  build:
+    name: 构建完整镜像
+    needs: guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: 腾出磁盘空间
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/boost || true
+          df -h /
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            parted rsync xz-utils wget unzip p7zip-full \
+            btrfs-progs exfatprogs e2fsprogs dosfstools \
+            util-linux kmod fdisk device-tree-compiler
+
+      - name: 检查源树关键文件
+        run: |
+          for f in boot/Image uboot/rk3562-uboot-16m.bin scripts/sync_image.sh \
+                   scripts/mount_arkos.sh uboot/flash_uboot.sh rootfs/etc/emulationstation/es_systems.cfg; do
+            [[ -f "$f" ]] || { echo "::error::缺少 $f"; exit 1; }
+          done
+          echo "boot/Image: $(du -h boot/Image | cut -f1)"
+          echo "uboot: $(du -h uboot/rk3562-uboot-16m.bin | cut -f1)"
+
+      - name: 下载基线镜像
+        env:
+          BASE_URL: ${{ inputs.base_url || vars.DARKOS_BASE_URL || 'https://github.com/bmdhacks/dArkOS_rg52mini/releases/download/v06242026/dArkOS_rg52mini_trixie_06242026.img.7z.001' }}
+        run: |
+          if [[ -z "${BASE_URL}" ]]; then
+            echo "::error::基线镜像地址为空"
+            exit 1
+          fi
+          echo "基线镜像: $BASE_URL"
+          # 直接落成工作副本, sync_image.sh 就不会再复制一份 12G 镜像
+          chmod +x scripts/ci_prepare_base.sh
+          ./scripts/ci_prepare_base.sh "$BASE_URL" dArkOS3562_work.img
+          df -h /
+
+      - name: 解压超大核心 (.so.xz)
+        run: |
+          # GitHub 单文件 100MB 限制: 仓库里存 xz 版本, 构建前还原 .so
+          while IFS= read -r -d '' f; do
+            echo "unxz $f"
+            unxz -f "$f"
+          done < <(find rootfs -name '*.so.xz' -print0)
+
+      - name: 构建镜像
+        run: |
+          chmod +x scripts/*.sh uboot/flash_uboot.sh
+          mkdir -p mnt
+          sudo ./scripts/sync_image.sh --ci
+          ls -lh dArkOS3562_work.img dArkOS3562_work.img.sha256
+          df -h /
+
+      - name: 压缩并分卷
+        env:
+          BUILD_DATE: ${{ needs.guard.outputs.build_date }}
+        run: |
+          set -euo pipefail
+          OUT="dArkOS3562_${BUILD_DATE}.img"
+          mv -f dArkOS3562_work.img "$OUT"
+          XZ="${OUT}.xz"
+          echo "== xz 压缩 (多线程)"
+          xz -T0 -6 -k "$OUT"
+          rm -f "$OUT"
+          sha256sum "$XZ" > "${XZ}.sha256"
+
+          SIZE=$(stat -c%s "$XZ")
+          LIMIT=$((1900 * 1024 * 1024))
+          if [[ "$SIZE" -gt "$LIMIT" ]]; then
+            echo "== 超过 1900MiB, 7z 分卷"
+            7z a -v1900m -mx=0 "${XZ}.7z" "$XZ" >/dev/null
+            rm -f "$XZ"
+          fi
+          ls -lh dArkOS3562_${BUILD_DATE}* | head -20
+
+      - name: 上传 draft Release
+        if: inputs.publish == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_DATE: ${{ needs.guard.outputs.build_date }}
+        run: |
+          shopt -s nullglob
+          FILES=(dArkOS3562_${BUILD_DATE}.img.xz* )
+          [[ ${#FILES[@]} -gt 0 ]] || { echo "::error::没有产物"; exit 1; }
+          gh release upload "dArkOS-${BUILD_DATE}" "${FILES[@]}" --clobber
+          echo "已上传: ${FILES[*]}"
+
+      - name: 上传 workflow artifact
+        if: inputs.publish != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: dArkOS3562-${{ needs.guard.outputs.build_date }}
+          path: |
+            dArkOS3562_*.img.xz*
+          retention-days: 7
+
+      - name: 摘要
+        run: |
+          {
+            echo "### dArkOS3562 构建完成"
+            echo ""
+            echo "| 文件 | 大小 |"
+            echo "|---|---|"
+            for f in dArkOS3562_*.img.xz*; do
+              echo "| $f | $(du -h "$f" | cut -f1) |"
+            done
+            echo ""
+            echo '```'
+            cat dArkOS3562_*.sha256 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

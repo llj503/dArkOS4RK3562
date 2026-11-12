@@ -1,0 +1,25 @@
+[GCPad1]
+Device = SDL/0/rk3562-joystick
+Buttons/A = `SDL/0/rk3562-joystick:Button S`
+Buttons/B = `SDL/0/rk3562-joystick:Button E`
+Buttons/X = `SDL/0/rk3562-joystick:Button N`
+Buttons/Y = `SDL/0/rk3562-joystick:Button W`
+Buttons/Z = `SDL/0/rk3562-joystick:Shoulder R`
+Buttons/Start = `SDL/0/rk3562-joystick:Start`
+Main Stick/Up = `SDL/0/rk3562-joystick:Left Y+`
+Main Stick/Down = `SDL/0/rk3562-joystick:Left Y-`
+Main Stick/Left = `SDL/0/rk3562-joystick:Left X-`
+Main Stick/Right = `SDL/0/rk3562-joystick:Left X+`
+C-Stick/Up = `SDL/0/rk3562-joystick:Right Y+`
+C-Stick/Down = `SDL/0/rk3562-joystick:Right Y-`
+C-Stick/Left = `SDL/0/rk3562-joystick:Right X-`
+C-Stick/Right = `SDL/0/rk3562-joystick:Right X+`
+Triggers/L = `SDL/0/rk3562-joystick:Trigger L`
+Triggers/R = `SDL/0/rk3562-joystick:Trigger R`
+Triggers/L-Analog = `SDL/0/rk3562-joystick:Trigger L`
+Triggers/R-Analog = `SDL/0/rk3562-joystick:Trigger R`
+D-Pad/Up = `SDL/0/rk3562-joystick:Pad N`
+D-Pad/Down = `SDL/0/rk3562-joystick:Pad S`
+D-Pad/Left = `SDL/0/rk3562-joystick:Pad W`
+D-Pad/Right = `SDL/0/rk3562-joystick:Pad E`
+Rumble/Motor = `SDL/0/rk3562-joystick:Motor`
