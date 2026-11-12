@@ -24,6 +24,8 @@ if lsblk -no FSTYPE "/dev/${primary_block}p5" 2>/dev/null | grep -qi exfat \
     sudo cp /boot/hook.sh /boot/firstboot.sh
     sudo rm -f /boot/hook.sh
   fi
+  # p5 已是 exfat: 首启扩容已完成, 本脚本不再需要 (否则每次开机都会进来)
+  sudo rm -f /boot/expandtoexfat.sh
   exit 0
 fi
 sudo ln -s /dev/${primary_block}p5 /dev/hda3

@@ -493,6 +493,21 @@ main() {
     rm -f /boot/.cn 2>/dev/null || true
   fi
 
+  # 已扩容的卡上不应再执行首启扩容: 清掉残留脚本, 避免换机型时再次进入
+  if [ -f /boot/expandtoexfat.sh ] && [ ! -f /boot/fstab.exfat ]; then
+    for pdev in /dev/mmcblk0p5 /dev/mmcblk1p5; do
+      if [ -b "$pdev" ] && lsblk -no FSTYPE "$pdev" 2>/dev/null | grep -qi exfat; then
+        if [ -f /boot/hook.sh ] && grep -q expandtoexfat /boot/firstboot.sh 2>/dev/null; then
+          cp -f /boot/hook.sh /boot/firstboot.sh
+          rm -f /boot/hook.sh
+        fi
+        rm -f /boot/expandtoexfat.sh
+        msg "expandtoexfat.sh removed (ROM partition already exfat)"
+        break
+      fi
+    done
+  fi
+
   # DuckStation 热键按机型热键类型生成 (happy5=FN/Misc1, select=Back)
   apply_duckstation_hotkeys
 
