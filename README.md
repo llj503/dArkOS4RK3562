@@ -1,114 +1,354 @@
-# dArkOS RG52Mini (trixie) 镜像定制
+# dArkOS for RK3562
 
-参考 [~/arkos4clone](https://github.com/lcdyk0517/arkos4clone) 的结构逻辑，
-针对 `dArkOS_rg52mini_trixie_06242026.img`（RK3562 / Debian trixie / GPT）。
+[中文](#中文) | [English](#english)
 
-## 镜像分区布局（trixie, 与 H700 三分区布局不同）
+---
 
-| 分区 | 偏移 | 大小 | 文件系统 | 卷标 | 挂载为 | 说明 |
-|---|---|---|---|---|---|---|
-| p1 | 8M | 4M | DTB blob | — | — | uboot FIT 区，sync 刷入开源 uboot |
-| p2 | 12M | 4M | data | — | — | uboot 相关（全零），**不动** |
-| p3 | 16M | 99M | FAT32 | `dArkOS_Fat` | `/boot` | 内核 Image/uInitrd/extlinux/dtb/电池图 |
-| p4 | 116M | 11.8G | btrfs (zstd) | `ROOTFS` | `/` | rootfs，用户 `ark` uid=1000 |
-| p5 | 12.1G | 79M | FAT16 | `ROMS` | `/roms` | 占位分区，首启 `expandtoexfat.sh` 转 exFAT 并解包 `/roms.tar` |
+## 中文
 
-引导链：uboot → extlinux (`p3:/extlinux/extlinux.conf`) → `Image` + `rk3562-rg52mini.dtb` + `uInitrd` → `root=/dev/mmcblk1p4 btrfs`。
-首启：`firstboot.sh` → `expandtoexfat.sh`（p5 转 exFAT 卷标 EASYROMS、解包 `/roms.tar`、`tempthemes` → `/roms/themes/`、切换 `fstab.exfat`），`/roms/tools` bind 到 `/opt/system/Tools`。
+### 这是什么
 
-## 目录结构（对齐 arkos4clone）
+dArkOS for RK3562 是构建在只读基线镜像 `dArkOS_rg52mini_trixie_06242026.img`
+之上的**差异层**（diff layer）：仓库里只放我们改过/新增的文件，
+由 `scripts/sync_image.sh` 同步进工作镜像并生成可刷写的完整镜像。
+
+- 基线镜像**永不修改**，也不进仓库（约 12GB）
+- 同一镜像通过 U-Boot / DTB 选择支持多台 RK3562 掌机
+- 目标系统：Debian trixie (aarch64)、内核 5.10.226、Btrfs rootfs、exFAT ROM 分区
+
+### 支持的机型
+
+| 机型 | DTB | 分辨率 | 备注 |
+|---|---|---|---|
+| NGP45HT | `rk3562-ngp45ht.dtb` | 1024x768 | 本仓库主要开发/验证机 |
+| RG52 Mini | `rk3562-rg52mini.dtb` | 640x480 竖屏 | 需 90° 旋转 |
+| RG43H Pro | `rk3562-rg43h.dtb` | 640x480 竖屏 | 可选 RG43V 变体 |
+| RG43V Pro | `rk3562-rg43h.dtb` | 640x480 竖屏 | FN 键 + 左摇杆极性不同 |
+| XF55H | `rk3562-xf55h.dtb` | 640x480 竖屏 | ZT9101 USB Wi-Fi |
+| Pocket AIS | `rk3562-ais.dtb` | — | SDIO Wi-Fi |
+
+切换机型：PC 端运行 `dtbtools/` 里的 dtbselector（或 `boot/dtbselector_*`），
+或手动修改 `/boot/extlinux/extlinux.conf` 的 `FDT`。首次开机 `hook.sh` 会按机型
+应用 quirks（SDL 旋转库、按键映射等），并把 `/boot/hook.sh` 提升为
+`/boot/firstboot.sh` 供后续每次启动使用。
+
+### 相对基线镜像新增/修改的内容
+
+**启动与内核**
+
+- AveyondFly RK3562 开源 U-Boot（`uboot/rk3562-uboot-16m.bin`，16MB）
+- 每机型独立 DTB / extlinux 配置；dArkOS 开机 logo 与关机充电动画
+- 内核重编（Linaro 6.3.1 交叉工具链），含：
+  - `rk3562-joystick`（`play_joystick`）：mV 死区、`axis_to_dpad`、
+    `invert_abs*`、`swap_ab/swap_xy`、`swap_start_home`、`linear_triggers`、
+    `joypad_tuning`（运行时校准）
+  - 摇杆 RGB 灯驱动（`led-3562`）、风扇 PWM、RK817 电量/关机修复
+  - Wi-Fi：AIC8800（USB/SDIO）、ZTop ZT9101（USB），按机型自动加载
+  - zram、Kodi 的 Rockchip MPP 硬解
+- **DMC/内存频率未做内核改动**：可用频点由 ATF（DDR 固件）通过
+  `DRAM_GET_FREQ_INFO` 上报，内核按 DT 的 `system-status-level` 使用，
+  不再有任何 `clamp_normal` 之类的覆盖参数
+
+**EmulationStation（fcamod）**
+
+- 重新编译，中英文完整本地化
+- 摇杆设置：死区（`adc_deadzone`，预设 32/64/128/256/384/512/768 mV，
+  自定义 10–1800，0=DT 默认）、交换 A/B、交换 X/Y、线性扳机上报开关、摇杆校准
+- 硬件菜单：摇杆灯、电源灯、风扇控制、BATTERYPLUS、ZRAM、DMC 最高频率
+- 新增系统：Nintendo 3DS、PlayStation 2、GameCube、Wii
+- **已移除 PS Vita / Vita3K 支持**
+
+**模拟器**
+
+| 平台 | 实现 | 说明 |
+|---|---|---|
+| 3DS | Azahar libretro 核心 | Vulkan + 自编 `malisx2` ICD；`azahar.sh` 启动 |
+| GBA / GB / GBC | armGBA 核心 | 同时提供 gambatte/mgba 等基线核心 |
+| PS2 | ARMSX2（`opt/armsx2-sdl`） | Vulkan + `malisx2`（`ps2.sh`） |
+| GameCube / Wii | Dolphin NoGUI | Vulkan `VK_KHR_display` 直出 KMS（`dolphin.sh`） |
+| PS1 | DuckStation 官方 mini AppImage | 每机型热键；设置/存档放 ROM 分区 |
+| PSP | PPSSPP | 基线版本，保留多后端选择 |
+| NDS | DSperate / DraStic | 需 BIOS，见下表 |
+| Saturn | YabaSanshiro | 需 BIOS |
+| 街机 | MAME / FBNeo 系列核心 | mame2015/2016 等为新增核心 |
+
+**构建与 CI**
+
+- `scripts/sync_image.sh`：源树 → 镜像同步；`--release` 生成发布镜像，
+  `--ci` 原地清理（CI 用，不复制 12GB 镜像）
+- `scripts/mount_arkos.sh`：按分区类型自动挂载镜像
+- `.github/workflows/build-image.yml`：手动触发的云构建，自动下载基线镜像、
+  构建、xz 压缩、超 1900MiB 自动 7z 分卷并上传 draft Release
+- 仓库内 >100MB 的核心以 `.so.xz` 形式保存，CI 构建前自动解压；
+  `sync_image.sh` 打包时排除 `*.so.xz`
+
+### 目录结构
 
 ```
-dArkOS/
-├── scripts/
-│   └── mount_arkos.sh   # 镜像挂载/卸载（分区按 TYPE+LABEL 自动识别，兼容 trixie 与 H700 布局）
-├── boot/                # -> rsync 进镜像 p3（对应 arkos4clone 的 boot/dArkOS）
-├── rootfs/              # -> rsync 进镜像 p4（对应 arkos4clone 的 rootfs/dArkOS，属主 1000:1000）
-├── roms/                # -> 打包为镜像内 /roms.tar（增量 + 原厂骨架合并）
-├── uboot/               # 开源 uboot 产物 (来自 ~/AveyondFly-u-boot rk3562 分支) + flash_uboot.sh
-└── .probe/              # 免 root 解包产物（可直接浏览，可删）
-    ├── rootfs_x/        # p4 btrfs 完整还原（8.7G 解压后）
-    └── rootfs.btrfs     # p4 裸 dump（sparse 7.8G）
+boot/      启动分区差异层（Image、hook.sh、DTB、extlinux）
+rootfs/    rootfs 差异层（/usr/local/bin、/opt、ES 配置等）
+uboot/     U-Boot 16MB blob 与刷写脚本
+scripts/   sync_image.sh / mount_arkos.sh / CI 辅助脚本
+dtbtools/  PC 端 DTB 选择工具
+roms/      ROM 目录占位（实际内容在设备 SD 卡上）
+.github/   CI 工作流
 ```
 
-## 用法
+### ROM 放哪里
+
+ROM 都在 SD 卡的 exFAT 分区（挂载点 `/roms`），按系统分目录：
+
+```
+/roms/3ds/     .3ds .cci .cxi .cia .3dsx .zip .7z
+/roms/ps2/     .iso .chd .cso .bin .elf
+/roms/gc/      .iso .gcm .rvz .wbfs
+/roms/wii/     .iso .rvz .wbfs
+/roms/psx/     .bin/.cue .chd .pbp
+/roms/psp/     .iso .cso .chd .pbp
+/roms/nds/     .nds .zip .7z
+/roms/saturn/  .bin/.cue .chd
+/roms/gba|gb|gbc/ ...
+```
+
+### BIOS / 系统文件放哪里
+
+统一放在 **`/roms/bios/`**（RetroArch 的 system 目录、DuckStation、ARMSX2
+的 `[Folders] Bios` 都指向这里）：
+
+| 平台 | 需要的文件 | 放置位置 |
+|---|---|---|
+| PS1（DuckStation / PCSX ReARMed） | `SCPH1001.BIN`（美版）、`SCPH5500`（日版）、`SCPH5501`（美版）、`SCPH5502`（欧版） | `/roms/bios/` |
+| PS2（ARMSX2） | 任意有效 PS2 BIOS dump，如 `scph39001.bin`、`SCPH-70012_BIOS_V12_USA_200.bin` | `/roms/bios/` |
+| NDS（DSperate） | `nds_bios9.bin`、`nds_bios7.bin`、`nds_firmware.bin` | `/roms/bios/` |
+| Saturn（YabaSanshiro） | `sega_101.bin`（日版）、`mpr-17933.bin`（美/欧版） | `/roms/bios/` |
+| Dreamcast（Flycast） | `dc_boot.bin`、`dc_flash.bin`（可选） | `/roms/bios/` |
+| PCE CD / Sega CD 等光驱机种 | 对应核心要求的 BIOS | `/roms/bios/` |
+| GBA（armGBA） | **不需要 BIOS** | — |
+| 3DS（Azahar） | 游戏不需要 BIOS；部分游戏需要 3DS 系统文件，通过 Azahar 自身导入 | Azahar 自管 |
+| N64 / SNES / MD 等卡带机种 | **不需要 BIOS** | — |
+
+注意：
+
+- `SCPH1001.BIN` 是 PS1 BIOS，**PS2 不能使用**
+- PS2 没有 BIOS 时 ARMSX2 只能进主界面，无法启动游戏
+- BIOS 文件名通常不强制，但大小/内容必须是正确 dump（模拟器按内容识别）
+
+### 本地构建
 
 ```bash
-# 一键同步源树 → 工作副本 dArkOS3562_work.img (不存在时自动从基准 cp 创建)
-sudo ./scripts/sync_image.sh
-# 同步到指定镜像 (基准镜像本身禁止写入)
-sudo ./scripts/sync_image.sh /path/xx.img
-# 发布: 同步 + 清理首启状态 (.console 删除、extlinux 回 rg52mini) + 另存日期镜像
+# 依赖：sudo、losetup、rsync、btrfs-progs、exfatprogs、7z、xz、parted
+# 把基线镜像放到仓库根目录，文件名必须是：
+#   dArkOS_rg52mini_trixie_06242026.img
+
 sudo ./scripts/sync_image.sh --release
-
-# 手动挂载（在可 sudo 的终端执行；ZCode 沙箱不能 sudo）
-sudo ./scripts/mount_arkos.sh mount ./dArkOS3562_work.img
-#   -> ./mnt/{boot,root,roms}
-sudo ./scripts/mount_arkos.sh unmount
 ```
 
-基准镜像 `dArkOS_rg52mini_trixie_06242026.img` 是只读基准, 永不修改
-(对齐 arkos4clone build_image.sh 的"源镜像不会被修改"原则)。
+产物：
 
-## 首启 / 开机机制
+```
+dArkOS3562_work_MMDDYYYY.img
+dArkOS3562_work_MMDDYYYY.img.sha256
+```
 
-- `firstboot.service` 每次开机跑 `/boot/firstboot.sh`: **先执行 hook.sh**
-  (机型检测/quirks/SDL2+SDL3 旋转库复制), 再跑 `expandtoexfat.sh` 扩容。
-  hook 不再挂在扩容成功路径末尾 — 扩容超时被杀或 p5 已 exfat 都不影响
-  SDL 复制。扩容收尾把 hook.sh 提升为 firstboot.sh。
-- `expandtoexfat.sh`: p5 已 exfat **且** `/boot/fstab.exfat` 已删除才算完成
-  (中途被杀的残留会重跑); 否则转 exFAT + 解包 roms.tar。
-- 一镜像多设备: dtbselector 切 `extlinux/conf.d/<机型>.conf`, hook.sh 用
-  console_detect 比较 FDT 与 `.console`, 变化即全量重应用 quirks。
-- 发布镜像必须走 `--release`: 清掉工作副本测试启动留下的 `.console`,
-  保证用户设备走完整首启。
+首次开机说明：
 
-## 引导 (开源 uboot, 必须)
+- ROM 分区会被扩容并重新格式化为 exFAT，**刷机前请自行备份 ROM/BIOS/存档**
+- 首次启动会执行 hook + 扩容并自动重启一次，第二次启动才进入 ES
+- 镜像不保存 Wi-Fi 密码，进 ES 后重新连接
 
-原厂 uboot 无法引导我们的内核/设备树 — sync 时自动刷入开源构建。
-来源: **~/AveyondFly-u-boot 的 rk3562 分支** (含关机充电修复、GPIO 时钟
-修复、显示支持 CONFIG_DM_CHARGE_DISPLAY/DM_VIDEO), 构建方式:
+### 云端 CI
+
+`.github/workflows/build-image.yml` 手动触发：
+
+- 基线镜像默认从
+  `bmdhacks/dArkOS_rg52mini` v06242026 的 `.7z.001/.002/.003` 下载
+  （可用输入框或仓库变量 `DARKOS_BASE_URL` 覆盖）
+- `publish=true`：创建 draft Release（tag `dArkOS-YYYYMMDD`）并上传产物
+- `publish=false`：仅保存为 workflow artifact
+- 产物为 `dArkOS3562_YYYYMMDD.img.xz`，超过 1900MiB 自动 7z 分卷
+
+### 说明
+
+- 内存/DDR 频率由 ATF 与 DDR 固件决定，本项目不再做内核覆盖
+- 不包含 DuckStation 自编译版本，使用官方 AppImage
+- 不提供任何商业 ROM/BIOS 文件
+
+---
+
+## English
+
+### What this is
+
+dArkOS for RK3562 is a **diff layer** on top of the read-only base image
+`dArkOS_rg52mini_trixie_06242026.img`. Only files that we changed or added are
+kept in this repository; `scripts/sync_image.sh` merges them into a working
+image and produces a flashable full image.
+
+- The base image is never modified and is not stored in the repo (~12GB)
+- One image supports several RK3562 handhelds via U-Boot/DTB selection
+- Target: Debian trixie (aarch64), Linux 5.10.226, Btrfs root, exFAT ROM partition
+
+### Supported devices
+
+| Device | DTB | Panel | Notes |
+|---|---|---|---|
+| NGP45HT | `rk3562-ngp45ht.dtb` | 1024x768 | main development/test unit |
+| RG52 Mini | `rk3562-rg52mini.dtb` | 640x480 portrait | 90° rotated |
+| RG43H Pro | `rk3562-rg43h.dtb` | 640x480 portrait | RG43V variant optional |
+| RG43V Pro | `rk3562-rg43h.dtb` | 640x480 portrait | FN key + inverted left stick |
+| XF55H | `rk3562-xf55h.dtb` | 640x480 portrait | ZT9101 USB Wi-Fi |
+| Pocket AIS | `rk3562-ais.dtb` | — | SDIO Wi-Fi |
+
+Select the device with the PC-side dtb selector (`dtbtools/`, `boot/dtbselector_*`)
+or by editing `FDT` in `/boot/extlinux/extlinux.conf`. On first boot `hook.sh`
+applies per-device quirks (SDL rotation libs, input mappings) and promotes
+itself to `/boot/firstboot.sh` for subsequent boots.
+
+### What is added on top of the base image
+
+**Boot / kernel**
+
+- AveyondFly RK3562 open U-Boot (`uboot/rk3562-uboot-16m.bin`, 16MB)
+- Per-device DTB and extlinux configs; boot logo and charging animation
+- Rebuilt kernel (Linaro 6.3.1 toolchain) including:
+  - `rk3562-joystick` (`play_joystick`): mV dead zone, `axis_to_dpad`,
+    `invert_abs*`, `swap_ab/swap_xy`, `swap_start_home`, `linear_triggers`,
+    runtime calibration via `joypad_tuning`
+  - stick RGB LED driver (`led-3562`), fan PWM, RK817 battery/poweroff fixes
+  - Wi-Fi: AIC8800 (USB/SDIO), ZTop ZT9101 (USB), loaded per device
+  - zram, Rockchip MPP hardware decoding for Kodi
+- **No kernel DMC override**: available memory frequencies come from ATF
+  (`DRAM_GET_FREQ_INFO`); the kernel follows the DT `system-status-level`.
+  There is no `clamp_normal`-style parameter anymore.
+
+**EmulationStation (fcamod)**
+
+- Rebuilt and fully localized (Chinese/English)
+- Joystick settings: dead zone (`adc_deadzone`, presets 32/64/128/256/384/512/768 mV,
+  custom 10–1800, 0 = DT default), swap A/B, swap X/Y, linear trigger reporting,
+  calibration
+- Hardware menus: joystick LED, power LED, fan control, BATTERYPLUS, ZRAM,
+  DMC max frequency
+- Added systems: Nintendo 3DS, PlayStation 2, GameCube, Wii
+- **PS Vita / Vita3K support removed**
+
+**Emulators**
+
+| Platform | Implementation | Notes |
+|---|---|---|
+| 3DS | Azahar libretro core | Vulkan + self-built `malisx2` ICD (`azahar.sh`) |
+| GBA / GB / GBC | armGBA core | base gambatte/mgba cores still available |
+| PS2 | ARMSX2 (`opt/armsx2-sdl`) | Vulkan + `malisx2` (`ps2.sh`) |
+| GameCube / Wii | Dolphin NoGUI | Vulkan `VK_KHR_display` direct KMS (`dolphin.sh`) |
+| PS1 | official DuckStation mini AppImage | per-device hotkeys, configs on ROM partition |
+| PSP | PPSSPP | base build, multiple backends |
+| NDS | DSperate / DraStic | BIOS required, see below |
+| Saturn | YabaSanshiro | BIOS required |
+| Arcade | MAME / FBNeo cores | mame2015/2016 cores are additions |
+
+**Build & CI**
+
+- `scripts/sync_image.sh`: source tree → image; `--release` for a release image,
+  `--ci` for in-place cleanup (no 12GB copy)
+- `scripts/mount_arkos.sh`: auto-mounts the image partitions
+- `.github/workflows/build-image.yml`: manual cloud build; downloads the base
+  image, builds, xz-compresses, splits into 7z volumes over 1900MiB and uploads
+  to a draft Release
+- Cores larger than GitHub's 100MB file limit are stored as `.so.xz` and
+  decompressed by CI; `sync_image.sh` excludes `*.so.xz` from the image
+
+### Repository layout
+
+```
+boot/      boot partition diff (kernel Image, hook.sh, DTBs, extlinux)
+rootfs/    rootfs diff (/usr/local/bin, /opt, ES configs, ...)
+uboot/     U-Boot 16MB blob and flasher
+scripts/   sync_image.sh / mount_arkos.sh / CI helpers
+dtbtools/  PC-side DTB selector
+roms/      placeholder for the ROM tree (lives on the SD card)
+.github/   CI workflows
+```
+
+### Where ROMs go
+
+All ROMs live on the exFAT partition mounted at `/roms`:
+
+```
+/roms/3ds/     .3ds .cci .cxi .cia .3dsx .zip .7z
+/roms/ps2/     .iso .chd .cso .bin .elf
+/roms/gc/      .iso .gcm .rvz .wbfs
+/roms/wii/     .iso .rvz .wbfs
+/roms/psx/     .bin/.cue .chd .pbp
+/roms/psp/     .iso .cso .chd .pbp
+/roms/nds/     .nds .zip .7z
+/roms/saturn/  .bin/.cue .chd
+/roms/gba|gb|gbc/ ...
+```
+
+### Where BIOS / system files go
+
+Everything goes to **`/roms/bios/`** (RetroArch system directory, DuckStation,
+and ARMSX2 `[Folders] Bios` all point there):
+
+| Platform | Files | Location |
+|---|---|---|
+| PS1 (DuckStation / PCSX ReARMed) | `SCPH1001.BIN` (US), `SCPH5500` (JP), `SCPH5501` (US), `SCPH5502` (EU) | `/roms/bios/` |
+| PS2 (ARMSX2) | any valid PS2 BIOS dump, e.g. `scph39001.bin`, `SCPH-70012_BIOS_V12_USA_200.bin` | `/roms/bios/` |
+| NDS (DSperate) | `nds_bios9.bin`, `nds_bios7.bin`, `nds_firmware.bin` | `/roms/bios/` |
+| Saturn (YabaSanshiro) | `sega_101.bin` (JP), `mpr-17933.bin` (US/EU) | `/roms/bios/` |
+| Dreamcast (Flycast) | `dc_boot.bin`, `dc_flash.bin` (optional) | `/roms/bios/` |
+| PC Engine CD / Sega CD etc. | BIOS required by the specific core | `/roms/bios/` |
+| GBA (armGBA) | **no BIOS required** | — |
+| 3DS (Azahar) | games need no BIOS; some require 3DS system files imported via Azahar | managed by Azahar |
+| N64 / SNES / Genesis etc. | **no BIOS required** | — |
+
+Notes:
+
+- `SCPH1001.BIN` is a **PS1** BIOS; it cannot be used for PS2
+- Without a PS2 BIOS, ARMSX2 only reaches the main menu
+- File names are usually not strict, but the content must be a valid dump
+
+### Local build
 
 ```bash
-cd ~/AveyondFly-u-boot   # 已检出 rk3562 分支
-CROSS_COMPILE=/opt/toolchains/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu- \
-RKBIN=$HOME/rkbin ./build_uboot_rk3562.sh
-cp build-rk3562/rk3562-uboot-16m.bin build-rk3562/manifest.txt ~/dArkOS/uboot/
+# requirements: sudo, losetup, rsync, btrfs-progs, exfatprogs, 7z, xz, parted
+# place the base image at the repository root with this exact name:
+#   dArkOS_rg52mini_trixie_06242026.img
+
+sudo ./scripts/sync_image.sh --release
 ```
 
-产物 `uboot/rk3562-uboot-16m.bin` 由 flash_uboot.sh 一次 dd 写到 **sector 64**:
+Outputs:
 
-| blob 内位置 | 磁盘位置 | 内容 |
-|---|---|---|
-| +0 / +512KiB | sector 64 / 1088 | idblock 双份冗余 (DDR v1.10 + 自编 SPL) |
-| blob sector 16320 | sector 16384 (p1, 4MiB) | FIT: ATF + OP-TEE + U-Boot (双份 2MiB) |
+```
+dArkOS3562_work_MMDDYYYY.img
+dArkOS3562_work_MMDDYYYY.img.sha256
+```
 
-blob 结尾恰好到 16MiB (p3 起点), 不越界; p2 不动。校验清单见 `uboot/manifest.txt`。
-单独刷写: `sudo ./uboot/flash_uboot.sh <img>` (基准镜像禁写)。
+First boot:
 
-## WiFi 驱动 (无用户态服务)
+- the ROM partition is expanded and reformatted to exFAT — **back up ROMs,
+  BIOS and saves before flashing**
+- the first boot runs hook + expansion and reboots once; ES starts on the
+  second boot
+- Wi-Fi credentials are not stored in the image; reconnect from ES
 
-全部 ko 在源树 `rootfs/usr/lib/modules/5.10.226/`, 随 sync 注入并 depmod:
+### Cloud CI
 
-| 模块 | 来源 | 设备 |
-|---|---|---|
-| extra/aic8800-usb/{aic_load_fw_usb,aic8800_fdrv_usb}.ko | kernel_rk3562 重编 | XF55H/NGP45HT (AIC8800DC USB) |
-| extra/rk915/rk915.ko | kernel_rk3562 重编 (覆盖原厂) | RG52mini revA / RG43H/V (SDIO) |
-| kernel/.../aic8800_{bsp,fdrv}.ko | 基准镜像原厂 (源码未改) | RG52mini revB (AIC8800DL SDIO) |
+`.github/workflows/build-image.yml` (manual trigger):
 
-加载由 `hook.sh: load_wifi_modules` 每次开机顺序执行 (USB → rk915 → aic SDIO),
-取代了 wifi-driver-load.service (sync 时 mask 原厂单元)。两个 SDIO 驱动 init
-都会 pulse rockchip_wifi_power(), 不能并发 — `etc/modprobe.d/dArkOS-wifi.conf`
-黑名单挡住 udev 自动加载, 显式 modprobe 不受影响。
-注意: 树内 aic8800_fdrv 源码已换成 USB 专用新版, SDIO 变体无法从当前源码编出;
-aic8800_bsp 与 USB loader 同导出 get_adap_test, 不能同场 modpost — 故 SDIO 栈
-沿用原厂 ko。内核树 aic8800/Makefile 已相应注释 usb/ 与 aic8800_bsp/ 入口。
+- by default the base image is downloaded from
+  `bmdhacks/dArkOS_rg52mini` v06242026 (`.7z.001/.002/.003`); override with the
+  `base_url` input or the `DARKOS_BASE_URL` repository variable
+- `publish=true`: creates a draft Release (tag `dArkOS-YYYYMMDD`) and uploads
+  the artifacts
+- `publish=false`: keeps them as workflow artifacts
+- output is `dArkOS3562_YYYYMMDD.img.xz`, split into 7z volumes when larger
+  than 1900MiB
 
-## 与 arkos4clone (H700) 的差异备忘
+### Notes
 
-- 分区号后移：boot=p3、root=p4、roms=p5；p1/p2 是 uboot 区（不挂载；p1 刷开源 uboot FIT，p2 不动）
-- root 为 **btrfs**（compress=zstd:1），rsync 注入时无需 e2fsck，校验用 `btrfs check`
-- 平台 RK3562（非 H700），extlinux 引导，内核 `Image` + 单个 `rk3562-rg52mini.dtb`
-- 用户单 `ark` uid=1000（相当于 arkos4clone 的 dArkOS 分支：777 / 1000:1000）
-- `/home/ark/.config/retroarch{,32}` 双套 cores；`tempthemes` 仍存在（5 主题）
-- `expandtoexfat.sh` 与 arkos4clone 版本**有差异**，同步时以本镜像版本为准或单独适配
+- DDR/memory frequency is decided by ATF and the DDR firmware; this project no
+  longer overrides it in the kernel
+- DuckStation is the official AppImage, not a self-built copy
+- No commercial ROMs or BIOS files are included
