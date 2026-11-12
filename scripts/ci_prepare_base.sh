@@ -27,13 +27,13 @@ download() { wget -q --show-progress --progress=bar:force:noscroll "$1"; }
 
 if [[ "$URL" == *.7z.001 ]]; then
   log "多分卷下载: ${URL}"
-  part=0
+  part=1
   while :; do
     suffix=$(printf "%03d" "$part")
     u="${URL%.001}.${suffix}"
     if ! download "$u"; then
-      if [[ "$part" -eq 0 ]]; then log "ERROR: 首卷下载失败: $u" >&2; exit 1; fi
-      log "分卷结束 (已下载 $part 卷)"
+      if [[ "$part" -eq 1 ]]; then log "ERROR: 首卷下载失败: $u" >&2; exit 1; fi
+      log "分卷结束 (共下载 $((part - 1)) 卷)"
       break
     fi
     part=$((part + 1))
