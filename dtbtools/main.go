@@ -22,20 +22,20 @@ var Version = "dev"
 
 // ---------- 机型条目 ----------
 type entry struct {
-	dev  string // conf.d 文件名 (设备名)
-	dtb  string // conf 里的 FDT 值, 用于校验 dtb 存在
+	dev string // conf.d 文件名 (设备名)
+	dtb string // conf 里的 FDT 值, 用于校验 dtb 存在
 }
 
 type lang struct {
-	title     string
-	warn      string
-	pick      string
-	invalid   string
-	missing   string
-	current   string
-	written   string
-	noDtb     string
-	bye       string
+	title   string
+	warn    string
+	pick    string
+	invalid string
+	missing string
+	current string
+	written string
+	noDtb   string
+	bye     string
 }
 
 var L = lang{
@@ -121,6 +121,31 @@ func main() {
 	fmt.Printf("\n✔ %s: %s\n", L.written, e.dev)
 	fmt.Printf("  extlinux/extlinux.conf  <-  conf.d/%s.conf\n", e.dev)
 	fmt.Printf("  FDT %s\n", e.dtb)
+
+	// 语言选择: 中文写 /boot/.cn, 开机 hook 据此把 ES/RA/PPSSPP 切成中文
+	fmt.Println("\n语言 / Language:")
+	fmt.Println("  1) English")
+	fmt.Println("  2) 中文 (简体)")
+	fmt.Print("\n输入编号 (回车=English): ")
+	lc, _ := in.ReadString('\n')
+	lc = strings.TrimSpace(lc)
+
+	cnPath := filepath.Join(baseDir, ".cn")
+	if lc == "2" {
+		if err := os.WriteFile(cnPath, []byte("zh-CN\n"), 0644); err != nil {
+			fmt.Printf("✘ 写入 .cn 失败: %v\n", err)
+		} else {
+			fmt.Println("✔ 已选择中文: 首次开机会自动切换 ES / RetroArch / PPSSPP 语言")
+		}
+	} else {
+		// 选择英文: 移除中文标记, 保持默认英文
+		if err := os.Remove(cnPath); err == nil {
+			fmt.Println("✔ 已选择 English (已移除 .cn)")
+		} else {
+			fmt.Println("✔ 已选择 English")
+		}
+	}
+
 	if runtime.GOOS == "windows" {
 		fmt.Println("\n请安全弹出 SD 卡后上机")
 	} else {

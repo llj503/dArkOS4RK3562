@@ -99,11 +99,89 @@ set_hostname() {
 }
 
 # ==================== 配置应用 ====================
+# 热键按钮: MODE(Guide) = 10, SELECT(Back) = 8; 其它机型保持 cfg 原值
+apply_ra_hotkey() {
+  local btn=""
+  case "${HOTKEY_TYPE:-}" in
+    mode)   btn="10" ;;
+    select) btn="8"  ;;
+    *)      return 0 ;;
+  esac
+
+  local f
+  for f in "/home/ark/.config/retroarch/retroarch.cfg" \
+           "/home/ark/.config/retroarch32/retroarch.cfg"; do
+    [[ -f "$f" ]] || continue
+    if grep -qE '^input_enable_hotkey_btn[[:space:]]*=' "$f"; then
+      sed -i -E "s|^input_enable_hotkey_btn[[:space:]]*=.*|input_enable_hotkey_btn = \"$btn\"|" "$f"
+    else
+      printf '\ninput_enable_hotkey_btn = "%s"\n' "$btn" >> "$f"
+    fi
+    chown 1000:1000 "$f" 2>/dev/null || true
+  done
+  msg "RetroArch hotkey: $HOTKEY_TYPE -> btn $btn"
+}
+
 apply_input() {
   msg "apply_input"
   cp_if_exists "$QUIRKS_DIR/retroarch64.cfg" "/home/ark/.config/retroarch/retroarch.cfg" "yes" || true
   cp_if_exists "$QUIRKS_DIR/retroarch32.cfg" "/home/ark/.config/retroarch32/retroarch.cfg" "yes" || true
+  apply_ra_hotkey
   cp_if_exists "$QUIRKS_DIR/es_input.cfg" "/etc/emulationstation/es_input.cfg" "yes" || true
+}
+
+
+# ==================== 国际化 ====================
+# PC 端 dtb 选择器选择中文时写 /boot/.cn; 开机应用一次后删除 (同 arkos4clone)
+apply_localization() {
+  local lang="$1" es_lang ra_lang ppsspp_lang
+  case "$lang" in
+    cn) es_lang="zh-CN"; ra_lang="12"; ppsspp_lang="zh_CN" ;;
+    *)  return 0 ;;
+  esac
+  msg "Applying $lang localization"
+
+  # EmulationStation
+  local es_cfg="/home/ark/.emulationstation/es_settings.cfg"
+  if [ -f "$es_cfg" ]; then
+    if grep -q '<string name="Language"' "$es_cfg"; then
+      sed -i "s|<string name=\"Language\" value=\"[^\"]*\"|<string name=\"Language\" value=\"$es_lang\"|" "$es_cfg" 2>/dev/null || true
+    else
+      printf '<string name="Language" value="%s" />\n' "$es_lang" >> "$es_cfg"
+    fi
+    chown 1000:1000 "$es_cfg" 2>/dev/null || true
+  fi
+
+  # 其它脚本/启动器用这个标记判断中文
+  mkdir -p /home/ark/.config
+  touch /home/ark/.config/.cn
+  chown 1000:1000 /home/ark/.config/.cn 2>/dev/null || true
+
+  # RetroArch / RetroArch32 (user_language: 12 = 简体中文)
+  local cfg
+  for cfg in /home/ark/.config/retroarch/retroarch.cfg \
+             /home/ark/.config/retroarch32/retroarch.cfg; do
+    [ -f "$cfg" ] || continue
+    if grep -q '^user_language[[:space:]]*=' "$cfg"; then
+      sed -i -E "s|^user_language[[:space:]]*=.*|user_language = \"$ra_lang\"|" "$cfg" 2>/dev/null || true
+    else
+      printf '\nuser_language = "%s"\n' "$ra_lang" >> "$cfg"
+    fi
+    chown 1000:1000 "$cfg" 2>/dev/null || true
+  done
+
+  # PPSSPP (与 arkos4clone 一致: 只替换 en_US 那一行)
+  local dir ini
+  for dir in /opt/ppsspp/backupforromsfolder/ppsspp/PSP/SYSTEM \
+             /roms/psp/ppsspp/PSP/SYSTEM \
+             /roms2/psp/ppsspp/PSP/SYSTEM; do
+    [ -d "$dir" ] || continue
+    for ini in ppsspp.ini ppsspp.ini.go ppsspp.ini.sdl; do
+      [ -f "$dir/$ini" ] || continue
+      sed -i "s/Language = en_US/Language = $ppsspp_lang/g" "$dir/$ini" 2>/dev/null || true
+    done
+  done
+  msg "Localization: ES=$es_lang RA=$ra_lang PPSSPP=$ppsspp_lang"
 }
 
 apply_joy_conf() {
@@ -407,6 +485,12 @@ main() {
     # .console/extlinux 已对，但 /etc/hostname 或 /etc/hosts 可能仍是
     # 旧机型 (PC 端 dtbselector 切换后首次开机). 这里保持三者一致.
     set_hostname "$DEVICE_NAME"
+  fi
+
+  # 国际化: PC 端 dtb 选择器选中文会写 /boot/.cn, 应用后删除 (同 arkos4clone)
+  if [ -f /boot/.cn ]; then
+    apply_localization cn
+    rm -f /boot/.cn 2>/dev/null || true
   fi
 
   # DuckStation 热键按机型热键类型生成 (happy5=FN/Misc1, select=Back)
