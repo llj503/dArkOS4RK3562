@@ -1,0 +1,37 @@
+#!/bin/bash
+# ============================================================
+# loader-update — 把内置的 RK3562 loader v1.10 写入 eMMC idblock
+#   数据来源: /opt/darkos/loader/rk3562-loader-v1.10.bin.xz (8MiB loader 区)
+#   写入由 write-loader-emmc.sh 完成: 先备份到 /home/ark/loader-backup-*.bin,
+#   再 dd 写入并回读 sha256 校验; 全过程的输出留在 /home/ark/loader-update.log.
+#   写 eMMC 引导区有变砖风险 (断电/坏数据), 只能由用户在 ES 里确认后调用.
+# 用法: sudo loader-update [设备, 默认 /dev/mmcblk0]
+# ============================================================
+set -uo pipefail
+
+DEV="${1:-/dev/mmcblk0}"
+BLOB_XZ=/opt/darkos/loader/rk3562-loader-v1.10.bin.xz
+BLOB=/tmp/rk3562-loader.bin
+LOG=/home/ark/loader-update.log
+
+[[ $(id -u) -eq 0 ]] || { echo "需要 root"; exit 1; }
+[[ -b "$DEV" ]] || { echo "没有 eMMC ($DEV)"; exit 1; }
+[[ "$(cat "/sys/block/$(basename "$DEV")/device/type" 2>/dev/null)" == "MMC" ]] \
+  || { echo "$DEV 不是 eMMC (纯 SD 卡机器不写引导区)"; exit 1; }
+[[ -f "$BLOB_XZ" ]] || { echo "缺少 $BLOB_XZ"; exit 1; }
+
+if ! xz -dc "$BLOB_XZ" > "$BLOB" 2>/dev/null; then
+  echo "解压失败: $BLOB_XZ"
+  rm -f "$BLOB"
+  exit 1
+fi
+
+if /usr/local/bin/write-loader-emmc.sh "$BLOB" "$DEV" > "$LOG" 2>&1; then
+  rm -f "$BLOB"
+  echo "eMMC loader 已更新为 v1.10，重启后生效。"
+  echo "备份/日志: $LOG"
+else
+  echo "更新失败，详见 $LOG"
+  echo "日志末尾有恢复命令 (用自动备份写回)。"
+  exit 1
+fi

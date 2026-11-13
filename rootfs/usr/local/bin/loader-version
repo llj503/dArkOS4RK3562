@@ -1,0 +1,26 @@
+#!/bin/bash
+# ============================================================
+# loader-version — 读 eMMC idblock 里的 Rockchip DDR loader 版本
+#   RK3562 的 BootROM 从 eMMC sector 64 读 idblock (loader.bin),
+#   文件里带 "ddr-vX.YY-<hash>" 字符串, 这里只输出版本号 (如 v1.10).
+#   只认 eMMC (device/type == MMC): 纯 SD 卡机器上 mmcblk0 就是 SD,
+#   写到那里会破坏 SD 引导, 所以这种情况直接不输出.
+#   输出: 版本号 / unknown (eMMC 在但读不到版本) / 空 (没有 eMMC)
+# 用法: sudo loader-version [设备, 默认 /dev/mmcblk0]
+# ============================================================
+DEV="${1:-/dev/mmcblk0}"
+
+[[ -b "$DEV" ]] || exit 0
+NAME=$(basename "$DEV")
+# 设备上不一定有 blockdev (util-linux 精简), 直接读 sysfs
+SIZE=$(cat "/sys/block/$NAME/size" 2>/dev/null || echo 0)
+(( SIZE > 0 )) || exit 0
+[[ "$(cat "/sys/block/$NAME/device/type" 2>/dev/null)" == "MMC" ]] || exit 0
+
+VER=$(dd if="$DEV" bs=512 skip=64 count=16320 status=none 2>/dev/null \
+  | tr -d '\0' \
+  | grep -ao 'ddr-v[0-9][0-9.]*' \
+  | head -n1 \
+  | sed 's/^ddr-//')
+
+echo "${VER:-unknown}"
