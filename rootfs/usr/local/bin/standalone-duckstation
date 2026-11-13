@@ -88,7 +88,12 @@ run_duckstation() {
     export LANG=zh_CN.UTF-8 LC_ALL=zh_CN.UTF-8
   fi
 
-  /opt/duckstation/duckstationsa-official -fullscreen -- "$DS_ROM" > /dev/null 2>&1
+  # 私编中文 mini 版优先 (不发布, 仅本机); 缺失时回退官方 AppImage
+  if [ -x /opt/duckstation-mini-zh-private/run.sh ]; then
+    /opt/duckstation-mini-zh-private/run.sh -fullscreen "$DS_ROM" > /dev/null 2>&1
+  else
+    /opt/duckstation/duckstationsa-official -fullscreen -- "$DS_ROM" > /dev/null 2>&1
+  fi
 }
 
 Test_Button_A

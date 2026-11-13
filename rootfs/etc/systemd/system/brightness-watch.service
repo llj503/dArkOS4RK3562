@@ -1,0 +1,13 @@
+[Unit]
+Description=Persist backlight brightness (ES only writes sysfs)
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/brightness-watch
+Restart=on-failure
+RestartSec=5
+Nice=15
+
+[Install]
+WantedBy=multi-user.target

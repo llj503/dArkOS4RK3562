@@ -4,11 +4,11 @@ defconfig=rk3562_defconfig
 cross_compile=/opt/toolchains/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 ddr_source=bin/rk35/rk3562_ddr_1332MHz_v1.10.bin
 loader_source=rk3562_loader_v1.10.108.bin
-8048177267f41231b3f92d3915edd504e81a3b0cff57f1c07c574facba00c1b7  /home/lcdyk/AveyondFly-u-boot/build-rk3562/idblock.img
-df211d599a807a30e3e2bc1c5cc6d42c4d551cba390204d714512b0b025a36aa  /home/lcdyk/AveyondFly-u-boot/build-rk3562/rk3562-download-loader.bin
-a8a7215308ffdf1938aaaacff097736fe7f9425d1deb4c12c5cff348641f68ab  /home/lcdyk/AveyondFly-u-boot/build-rk3562/uboot.img
-62999bc4bb73cfa54b31d2dccc55510d6741afebdfbb9b8831177f45d063ba3d  /home/lcdyk/AveyondFly-u-boot/build-rk3562/rk3562-uboot-16m.bin
-4faaa6f8d730f0d07d2cb7546eed31fcb18501947bbf705be7e19bdc69a066c9  /home/lcdyk/AveyondFly-u-boot/build-rk3562/u-boot-nodtb.bin
+3ef8646f20cc3bd20bb508037aae172fb8d739650b74db9bb1b21d15485441e1  /home/lcdyk/AveyondFly-u-boot/build-rk3562/idblock.img
+931c7c6331d80b35d0e18dcfc924b7748711b6c5d4b2f6352fb7d81338f117f5  /home/lcdyk/AveyondFly-u-boot/build-rk3562/rk3562-download-loader.bin
+42ab1632e08dadee1bf8db4f59461d474a6620e05e840818595e2ec434cb9346  /home/lcdyk/AveyondFly-u-boot/build-rk3562/uboot.img
+4e2631907919ebcf4e8ccf9db45ff643dd8b74f7c5e4f65bc22f8d7956b42899  /home/lcdyk/AveyondFly-u-boot/build-rk3562/rk3562-uboot-16m.bin
+a0d33fc44e4a83d4b9aa50d5beca3266750521b6a01e0cf255a22e80ec35931e  /home/lcdyk/AveyondFly-u-boot/build-rk3562/u-boot-nodtb.bin
 e7ffa453e530d09e72c4042814ff0e90d97facacf66aa813fe384824d4c6caeb  /home/lcdyk/AveyondFly-u-boot/build-rk3562/u-boot.dtb
-e0cc3b9ca280ba52e8fcb6b9b9e8f4e08bfde52fd069b9f67ae24f60b0999cac  /home/lcdyk/AveyondFly-u-boot/build-rk3562/u-boot-spl.bin
+c716f3c6669dbef9766d71dfaf7e8439d2f3d538c3903c7ecabd58db87c2e084  /home/lcdyk/AveyondFly-u-boot/build-rk3562/u-boot-spl.bin
 f11f4974308a54a5879bd5bb96b8e112f6d8e996540fe2422ca482de14635e60  /home/lcdyk/AveyondFly-u-boot/build-rk3562/rk3562-ddr.bin

@@ -134,15 +134,20 @@ apply_input() {
 # ==================== 国际化 ====================
 # PC 端 dtb 选择器选择中文时写 /boot/.cn; 开机应用一次后删除 (同 arkos4clone)
 apply_localization() {
-  local lang="$1" es_lang ra_lang ppsspp_lang
+  local lang="$1" es_lang ra_lang ppsspp_lang ppsspp_from
   case "$lang" in
-    cn) es_lang="zh-CN"; ra_lang="12"; ppsspp_lang="zh_CN" ;;
+    cn) es_lang="zh-CN"; ra_lang="12"; ppsspp_lang="zh_CN"; ppsspp_from="en_US" ;;
+    en) es_lang="en";    ra_lang="0";  ppsspp_lang="en_US"; ppsspp_from="zh_CN" ;;
     *)  return 0 ;;
   esac
   msg "Applying $lang localization"
 
   # EmulationStation
   local es_cfg="/home/ark/.emulationstation/es_settings.cfg"
+  if [ ! -f "$es_cfg" ]; then
+    mkdir -p "$(dirname "$es_cfg")"
+    printf '<?xml version="1.0"?>\n' > "$es_cfg"
+  fi
   if [ -f "$es_cfg" ]; then
     if grep -q '<string name="Language"' "$es_cfg"; then
       sed -i "s|<string name=\"Language\" value=\"[^\"]*\"|<string name=\"Language\" value=\"$es_lang\"|" "$es_cfg" 2>/dev/null || true
@@ -150,12 +155,21 @@ apply_localization() {
       printf '<string name="Language" value="%s" />\n' "$es_lang" >> "$es_cfg"
     fi
     chown 1000:1000 "$es_cfg" 2>/dev/null || true
+    if grep -q "<string name=\"Language\" value=\"$es_lang\"" "$es_cfg"; then
+      msg "ES language: $es_lang"
+    else
+      warn "ES language write failed: $es_cfg"
+    fi
   fi
 
   # 其它脚本/启动器用这个标记判断中文
   mkdir -p /home/ark/.config
-  touch /home/ark/.config/.cn
-  chown 1000:1000 /home/ark/.config/.cn 2>/dev/null || true
+  if [ "$lang" = "cn" ]; then
+    touch /home/ark/.config/.cn
+    chown 1000:1000 /home/ark/.config/.cn 2>/dev/null || true
+  else
+    rm -f /home/ark/.config/.cn
+  fi
 
   # RetroArch / RetroArch32 (user_language: 12 = 简体中文)
   local cfg
@@ -170,7 +184,7 @@ apply_localization() {
     chown 1000:1000 "$cfg" 2>/dev/null || true
   done
 
-  # PPSSPP (与 arkos4clone 一致: 只替换 en_US 那一行)
+  # PPSSPP (与 arkos4clone 一致: 只替换语言那一行)
   local dir ini
   for dir in /opt/ppsspp/backupforromsfolder/ppsspp/PSP/SYSTEM \
              /roms/psp/ppsspp/PSP/SYSTEM \
@@ -178,10 +192,55 @@ apply_localization() {
     [ -d "$dir" ] || continue
     for ini in ppsspp.ini ppsspp.ini.go ppsspp.ini.sdl; do
       [ -f "$dir/$ini" ] || continue
-      sed -i "s/Language = en_US/Language = $ppsspp_lang/g" "$dir/$ini" 2>/dev/null || true
+      sed -i "s/Language = $ppsspp_from/Language = $ppsspp_lang/g" "$dir/$ini" 2>/dev/null || true
     done
   done
   msg "Localization: ES=$es_lang RA=$ra_lang PPSSPP=$ppsspp_lang"
+}
+
+# 私编中文 duckstation-mini (不随镜像发布, CC BY-NC-ND): dtbselector 选中文
+# (/boot/.cn 存在) 且 boot 分区放了 duckstation-mini-zh-private.tar.xz 时,
+# 解到 /opt 覆盖安装, standalone-duckstation 启动器会自动优先用它;
+# 把压缩包从 boot 分区删掉(或选 English)下次开机就回官方版.
+DS_PRIV_DIR=/opt/duckstation-mini-zh-private
+DS_PRIV_STAMP="$DS_PRIV_DIR/.archive"
+apply_private_duckstation() {
+  local t="" stamp
+  if [ ! -f /boot/.cn ]; then
+    # 只回收我们自己装的 (有 stamp), 不动手动部署的目录
+    if [ -f "$DS_PRIV_STAMP" ]; then
+      rm -rf "$DS_PRIV_DIR"
+      msg "Private duckstation-mini-zh removed (language not zh-CN)"
+    fi
+    return 0
+  fi
+  for t in /boot/duckstation-mini-zh-private.tar.xz \
+           /boot/duckstation-mini-zh-private.tar.gz \
+           /boot/duckstation-mini-zh-private.tar; do
+    [ -f "$t" ] && break
+    t=""
+  done
+  [ -n "$t" ] || return 0
+  stamp="$(basename "$t")-$(stat -c %s "$t" 2>/dev/null)"
+  [ "$(cat "$DS_PRIV_STAMP" 2>/dev/null)" = "$stamp" ] && return 0
+  msg "Installing private duckstation-mini-zh from $t"
+  rm -rf "$DS_PRIV_DIR" "$DS_PRIV_DIR.tmp"
+  mkdir -p "$DS_PRIV_DIR.tmp"
+  if ! tar -xf "$t" -C "$DS_PRIV_DIR.tmp"; then
+    warn "extract failed: $t (需要 /opt 有足够空间)"
+    rm -rf "$DS_PRIV_DIR.tmp"
+    return 1
+  fi
+  if [ -d "$DS_PRIV_DIR.tmp/duckstation-mini-zh-private" ]; then
+    mv "$DS_PRIV_DIR.tmp/duckstation-mini-zh-private" "$DS_PRIV_DIR"
+  else
+    mv "$DS_PRIV_DIR.tmp" "$DS_PRIV_DIR"
+  fi
+  rm -rf "$DS_PRIV_DIR.tmp"
+  chmod -R 777 "$DS_PRIV_DIR" 2>/dev/null || true
+  printf '%s\n' "$stamp" > "$DS_PRIV_STAMP"
+  sync
+  msg "Private duckstation-mini-zh installed: $stamp"
 }
 
 apply_joy_conf() {
@@ -331,8 +390,11 @@ apply_fc_cache() {
 
 apply_duckstation_hotkeys() {
   local hk s block
+  # 与 gamecontrollerdb 对应: mode=BTN_MODE(HOME)->Guide, select=Back,
+  # happy5=BTN_TRIGGER_HAPPY5->Misc1 (该键在 rk3562 手柄上不存在, 别混用)
   case "$HOTKEY_TYPE" in
     select) hk="SDL-0/Back" ;;
+    mode)   hk="SDL-0/Guide" ;;
     *)      hk="SDL-0/Misc1" ;;
   esac
   s="/home/ark/.local/share/duckstation/settings.ini"
@@ -352,6 +414,31 @@ FastForward = $hk & SDL-0/LeftShoulder"
   fi
   chown 1000:1000 "$s" 2>/dev/null || true
   msg "DuckStation hotkeys: $hk + X/L2/R2/L1"
+}
+
+# ARMSX2 (PS2): OpenPauseMenu = 机型 hotkey + X (PCSX2.ini 的 [Hotkeys] 段;
+# SDL 绑定名见 SDLInputSource.cpp, 本机 SDL 映射 x:b3 -> FaceWest)
+apply_armsx2_hotkeys() {
+  local hk f
+  case "$HOTKEY_TYPE" in
+    select) hk="SDL-0/Back" ;;
+    mode)   hk="SDL-0/Guide" ;;
+    *)      hk="SDL-0/Misc1" ;;
+  esac
+  local line="OpenPauseMenu = $hk & SDL-0/FaceWest"
+  local b
+  for b in /roms /roms2; do
+    f="$b/ps2/armsx2/.config/ARMSX2/inis/PCSX2.ini"
+    [ -f "$f" ] || continue
+    sed -i -E '/^OpenPauseMenu[[:space:]]*=/d' "$f" 2>/dev/null || true
+    if grep -q '^\[Hotkeys\]' "$f"; then
+      awk -v l="$line" '{ print } /^\[Hotkeys\]/{ print l }' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    else
+      printf '\n[Hotkeys]\n%s\n' "$line" >> "$f"
+    fi
+    chown 1000:1000 "$f" 2>/dev/null || true
+  done
+  msg "ARMSX2 hotkey: $hk + X (OpenPauseMenu)"
 }
 
 # RetroArch udev 手柄的轴编号按"已存在的 ABS 轴"压缩, 不是 evdev 的 ABS 码:
@@ -487,11 +574,19 @@ main() {
     set_hostname "$DEVICE_NAME"
   fi
 
-  # 国际化: PC 端 dtb 选择器选中文会写 /boot/.cn, 应用后删除 (同 arkos4clone)
+  # 语言只认 PC 端 dtbselector 写的 /boot/.cn (选中文=存在, 选 English=删除),
+  # 机身不再弹框选择; 每次开机把 ES/RA/PPSSPP 同步到该选择.
+  # ES 本构建没有语言菜单, 设置只能写进 es_settings.cfg.
+  local es_lang_cur
+  es_lang_cur=$(sed -n 's|.*<string name="Language" value="\([^"]*\)".*|\1|p' \
+    /home/ark/.emulationstation/es_settings.cfg 2>/dev/null | head -n1)
   if [ -f /boot/.cn ]; then
-    apply_localization cn
-    rm -f /boot/.cn 2>/dev/null || true
+    [ "$es_lang_cur" = "zh-CN" ] || apply_localization cn
+  elif [ "$es_lang_cur" = "zh-CN" ]; then
+    apply_localization en
   fi
+
+  apply_private_duckstation
 
   # 已扩容的卡上不应再执行首启扩容: 清掉残留脚本, 避免换机型时再次进入
   if [ -f /boot/expandtoexfat.sh ] && [ ! -f /boot/fstab.exfat ]; then
@@ -511,6 +606,9 @@ main() {
   # DuckStation 热键按机型热键类型生成 (happy5=FN/Misc1, select=Back)
   apply_duckstation_hotkeys
 
+  # ARMSX2 (PS2) 暂停菜单: 机型热键 + X
+  apply_armsx2_hotkeys
+
   # 右摇杆/扳机轴索引按机型 (是否有模拟扳机) 修正, 每次开机都写
   apply_retroarch_axes
 
@@ -521,6 +619,16 @@ main() {
   fi
 
   # 每次开机都做的轻量项
+  # 亮度持久化: ES 只写 sysfs 不保存, brightness-watch 服务负责落盘,
+  # 这里开机恢复; 没有记录时不动背光 (保持内核/dtb 默认)
+  BL_CFG="/home/ark/.config/brightness.level"
+  BL_SYS="/sys/class/backlight/backlight/brightness"
+  if [ -w "$BL_SYS" ] && [ -f "$BL_CFG" ]; then
+    bl=$(cat "$BL_CFG" 2>/dev/null || true)
+    if [[ "$bl" =~ ^[0-9]+$ ]] && [ "$bl" -le 255 ]; then
+      echo "$bl" > "$BL_SYS" 2>/dev/null && msg "Brightness: $bl"
+    fi
+  fi
   # gptokeyb (onscripter 的菜单导航) 需要写 uinput
   chmod 666 /dev/uinput 2>/dev/null || true
   mkdir -p /roms/3ds 2>/dev/null || true

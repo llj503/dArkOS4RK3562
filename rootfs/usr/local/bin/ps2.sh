@@ -22,8 +22,48 @@ if [ ! -f "$DATA/.config/ARMSX2/inis/PCSX2.ini" ]; then
   cp /opt/armsx2-sdl/PCSX2.ini.template "$DATA/.config/ARMSX2/inis/PCSX2.ini"
 fi
 
-# ARMSX2 退出时可能把 [Folders] Bios 写成相对 DataRoot 的 "bios"; 统一回 /roms/bios
-sed -i 's|^Bios = .*|Bios = /roms/bios|' "$DATA/.config/ARMSX2/inis/PCSX2.ini"
+# BIOS 目录: 共享 /roms/bios 里通常只有 PS1 BIOS (512K, ARMSX2 会报
+# BIOSNotUsable), PS2 BIOS 在各机型的 /roms/ps2/bios (4M)。优先用后者。
+BIOS_DIR=/roms/bios
+for f in /roms/ps2/bios/*.BIN /roms/ps2/bios/*.bin; do
+  [ -f "$f" ] && [ "$(stat -c %s "$f" 2>/dev/null)" = 4194304 ] && BIOS_DIR=/roms/ps2/bios && break
+done
+sed -i "s|^Bios = .*|Bios = $BIOS_DIR|" "$DATA/.config/ARMSX2/inis/PCSX2.ini"
+
+# ARMSX2 异常退出时会把 ini 写回默认 (Renderer=-1 会直接黑屏退出, Bios 会变回
+# 相对路径 "bios"), 每次启动都强制修正这两个关键项
+sed -i -E 's|^Renderer = .*|Renderer = 14|' "$DATA/.config/ARMSX2/inis/PCSX2.ini"
+
+# 打开暂停菜单 = 机型热键 + X (与 hook.sh 同一套映射: mode=Guide, select=Back,
+# 其余=Misc1). ARMSX2 退出时会重写 ini 把 [Hotkeys] 还原成 Keyboard/Escape,
+# 光在 hook 里写会被冲掉, 所以每次启动前都重新写一遍.
+HOTKEY_TYPE=happy5
+[ -x /usr/local/bin/console_detect ] && eval "$(/usr/local/bin/console_detect -s 2>/dev/null)" || true
+case "${HOTKEY_TYPE:-happy5}" in
+  select) HK="SDL-0/Back"  ;;
+  mode)   HK="SDL-0/Guide" ;;
+  *)      HK="SDL-0/Misc1" ;;
+esac
+INI="$DATA/.config/ARMSX2/inis/PCSX2.ini"
+sed -i -E '/^OpenPauseMenu[[:space:]]*=/d' "$INI" 2>/dev/null || true
+if grep -q '^\[Hotkeys\]' "$INI" 2>/dev/null; then
+  awk -v l="OpenPauseMenu = $HK & SDL-0/FaceWest" '{ print } /^\[Hotkeys\]/{ print l }' "$INI" > "$INI.tmp" \
+    && mv "$INI.tmp" "$INI"
+else
+  printf '\n[Hotkeys]\nOpenPauseMenu = %s & SDL-0/FaceWest\n' "$HK" >> "$INI"
+fi
+
+# ARMSX2 解析极简单轨 .cue 会失败 (DoCDVDopen), 但直接读同一 .bin 正常;
+# 单轨 cue 自动换成它引用的 bin。
+case "${ROM##*.}" in
+  cue|CUE)
+    _bn=$(sed -n 's/^FILE "\(.*\)" BINARY.*/\1/p' "$ROM" 2>/dev/null | head -1)
+    if [ -n "$_bn" ] && [ "$(grep -c '^[[:space:]]*TRACK' "$ROM" 2>/dev/null)" = "1" ] \
+       && [ -f "$(dirname "$ROM")/$_bn" ]; then
+      ROM="$(dirname "$ROM")/$_bn"
+    fi
+    ;;
+esac
 
 export HOME="$DATA"
 export XDG_CONFIG_HOME="$DATA/.config"

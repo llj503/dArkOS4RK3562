@@ -14,6 +14,10 @@
 #   sudo ./scripts/sync_image.sh                 # 同步到工作副本 (自动创建)
 #   sudo ./scripts/sync_image.sh /path/xx.img    # 同步到指定镜像 (基准除外)
 #   sudo ./scripts/sync_image.sh --release [img] # 同步后清理首启状态, 另存发布镜像
+#
+# 首启转正: 工作副本一旦被测试启动过 (.console/.quirks_applied 存在), 同步
+# 结束会自动把 boot/hook.sh 转正成 firstboot.sh 并删掉 hook.sh/expandtoexfat.sh,
+# 与设备上扩容成功后的终态一致; 发布/CI 镜像不受影响 (新卡首启要用 wrapper)。
 # ============================================================
 set -euo pipefail
 D=$(cd "$(dirname "$0")/.." && pwd)
@@ -154,6 +158,21 @@ echo "== 校验关键文件"
 for f in boot/Image boot/hook.sh root/usr/local/bin/console_detect root/opt/retrorun/retrorun32 root/usr/lib/arm-linux-gnueabihf/libsasl2.so.2; do
   [[ -e "$D/mnt/$f" ]] && echo "✓ $f" || { echo "✗ $f 缺失!"; exit 1; }
 done
+
+# 首启转正: 已扩容的工作副本 (.console/.quirks_applied = hook 跑过的痕迹)
+# 不需要再走 wrapper + expandtoexfat, 直接把 hook.sh 转正为 firstboot.sh,
+# 与设备上扩容成功后的终态一致 (expandtoexfat.sh 成功/失败分支都是
+# cp hook.sh firstboot.sh; rm hook.sh; rm -- expandtoexfat.sh)。
+# 否则同步会重新加回 hook.sh, firstboot.service 每次开机先跑 wrapper 再跑
+# hook, 镜像里永远残留一份 hook.sh。
+# 发布/CI 镜像保持 wrapper + expandtoexfat: 新卡首启靠它扩容+选语言。
+if [[ "$RELEASE" == "no" && "$CI" == "no" ]] \
+   && { [[ -f "$D/mnt/boot/.console" ]] || [[ -f "$D/mnt/boot/.quirks_applied" ]]; }; then
+  echo "== 首启转正: hook.sh -> firstboot.sh (已扩容工作副本)"
+  sudo cp -f "$D/mnt/boot/hook.sh" "$D/mnt/boot/firstboot.sh"
+  sudo rm -f "$D/mnt/boot/hook.sh" "$D/mnt/boot/expandtoexfat.sh"
+  sudo chmod 777 "$D/mnt/boot/firstboot.sh" 2>/dev/null || true
+fi
 
 if [[ "$RELEASE" == "yes" || "$CI" == "yes" ]]; then
   echo "== 发布清理: 恢复首启状态 (.console/.quirks_applied 删除, extlinux 回默认 rg52mini)"

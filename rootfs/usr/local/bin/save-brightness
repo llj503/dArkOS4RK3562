@@ -1,0 +1,23 @@
+#!/bin/bash
+# ============================================================
+# save-brightness — 把当前背光亮度存到 /home/ark/.config/brightness.level,
+# 开机时由 hook.sh 自动恢复 (ArkOS/ES 本身不持久化亮度, 只有 sysfs 写入).
+#
+# 用法: 在 ES 里调好亮度后执行一次; 之后每次开机自动恢复.
+#       恢复值可直接编辑 /home/ark/.config/brightness.level (0-255).
+# ============================================================
+set -euo pipefail
+
+CFG="/home/ark/.config/brightness.level"
+SYS="/sys/class/backlight/backlight/brightness"
+
+cur="$(cat "$SYS" 2>/dev/null)" || { echo "无法读取背光: $SYS" >&2; exit 1; }
+[[ "$cur" =~ ^[0-9]+$ ]] || { echo "无效亮度值: $cur" >&2; exit 1; }
+if (( cur < 20 )); then
+  echo "当前亮度 $cur 过低 (可能正处屏保调暗状态), 先按一下手柄再执行" >&2
+  exit 1
+fi
+
+echo "$cur" > "$CFG"
+chown 1000:1000 "$CFG" 2>/dev/null || true
+echo "已保存亮度: $cur (0-255), 重启后自动恢复"

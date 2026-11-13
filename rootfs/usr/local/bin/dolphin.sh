@@ -63,13 +63,21 @@ export AUDIODEV=default
 # malisx2 (glibc 版, 源码自编): PS2/Wii 必须用它, 系统 libmali 在这两个上会出问题
 export VK_ICD_FILENAMES=/opt/malisx2/malisx2.json
 
-nice -n 0 "$APP" -p fbdev -v Vulkan \
+# SELECT+START 退出 (killer_daemon 与 ps2.sh 一致; pkill 按进程名前缀匹配)
+echo "VAR=dolphin-emu-nogui" > /home/ark/.config/KILLIT
+sudo systemctl restart killer_daemon.service
+
+nice -n 0 "$APP" -p drm -v Vulkan \
   -C Dolphin.DSP.Backend=ALSA \
   -C Graphics.Settings.ShowFPS=True \
   -C Graphics.Settings.ShowSpeed=True \
   -e "$ROM" > "$CFG_DIR/dolphin.log" 2>&1
+RC=$?
+
+sudo systemctl stop killer_daemon.service
 
 # NoGUI 退出后把 ES 拉回来 (ES 启动模拟器时会退出)
 if ! systemctl is-active --quiet emulationstation; then
   sudo systemctl start emulationstation
 fi
+exit $RC

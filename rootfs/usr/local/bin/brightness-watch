@@ -1,0 +1,26 @@
+#!/bin/bash
+# ============================================================
+# brightness-watch — 背光变化即持久化 (ES 只写 sysfs, 不保存)
+#   /sys/class/backlight/backlight/brightness 一变就写
+#   /home/ark/.config/brightness.level; hook.sh 每次开机读回。
+#   <20 的值视为屏保/息屏调暗, 不保存 (与 save-brightness 一致)。
+# ============================================================
+CFG="/home/ark/.config/brightness.level"
+SYS="/sys/class/backlight/backlight/brightness"
+
+[ -w "$SYS" ] || SYS=$(ls -d /sys/class/backlight/*/brightness 2>/dev/null | head -n1)
+[ -n "$SYS" ] && [ -w "$SYS" ] || exit 0
+
+mkdir -p "$(dirname "$CFG")"
+last=$(cat "$CFG" 2>/dev/null || true)
+
+while :; do
+  v=$(cat "$SYS" 2>/dev/null || true)
+  if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 20 )) && [ "$v" != "$last" ]; then
+    last="$v"
+    if [ "$(cat "$CFG" 2>/dev/null)" != "$v" ]; then
+      printf '%s\n' "$v" > "$CFG" && chown 1000:1000 "$CFG" 2>/dev/null
+    fi
+  fi
+  sleep 2
+done
