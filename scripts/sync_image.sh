@@ -79,6 +79,23 @@ if [ -d "$D/rootfs/etc" ]; then
   sudo rsync -a --chown=0:0 --exclude 'emulationstation/es_input.cfg' --exclude '*Zone.Identifier*' \
     "$D/rootfs/etc/" "$D/mnt/root/etc/"
 fi
+
+# 基线里 /etc/emulationstation/themes 是 symlink -> /roms/themes/。
+# Vita3K-Plus 的 psvita 主题补丁放在 rootfs/etc/emulationstation/themes/ 下,
+# rsync 不带 -K 会把该软链替换成真实目录, ES 便只剩 1 个主题。
+# 这里把差异层补丁转存到首启主题源 /tempthemes, 再恢复原厂软链。
+THEME_LINK="$D/mnt/root/etc/emulationstation/themes"
+if [[ -d "$THEME_LINK" && ! -L "$THEME_LINK" ]]; then
+  for sub in "$THEME_LINK"/*/; do
+    [[ -d "$sub" ]] || continue
+    name=$(basename "$sub")
+    sudo mkdir -p "$D/mnt/root/tempthemes/$name"
+    sudo cp -a "$sub." "$D/mnt/root/tempthemes/$name/"
+  done
+  sudo rm -rf "$THEME_LINK"
+  sudo ln -s /roms/themes/ "$THEME_LINK"
+  echo "✓ 恢复 /etc/emulationstation/themes 软链 (差异层视图转存 /tempthemes)"
+fi
 # 其余 (usr/local/bin /opt /home/ark 等) 沿用 ArkOS 惯例: ark:1000 + 777
 sudo rsync -a --chown=1000:1000 --chmod=D0777,F0777 \
   --exclude '/etc' --exclude '*.so.xz' --exclude '*Zone.Identifier*' "$D/rootfs/" "$D/mnt/root/"
@@ -131,8 +148,9 @@ sudo rm -f "$D/mnt/root/usr/local/bin/standalone-duckstation-gpl" \
            "$D/mnt/root/usr/local/bin/duckstation-backend" \
            "$D/mnt/root/home/ark/.config/duckstation.backend"
 
-# Vita3K (PSV) 支持已移除: 清掉早期同步进镜像的启动器 / 程序 / Wayland ICD / 配置
-sudo rm -rf "$D/mnt/root/opt/vita3k" "$D/mnt/root/opt/malisx2-wayland" \
+# Vita3K-Plus (PSV) 已回归: /opt/vita3k 由源树提供, 不可删除。
+# 只清理早期版本的遗留 Wayland ICD / 配置 / 旧启动器。
+sudo rm -rf "$D/mnt/root/opt/malisx2-wayland" \
             "$D/mnt/root/home/ark/.config/Vita3K"
 sudo rm -f "$D/mnt/root/usr/local/bin/vita3k.sh" \
            "$D/mnt/root/usr/local/bin/vita3k-install-firmware.sh"
