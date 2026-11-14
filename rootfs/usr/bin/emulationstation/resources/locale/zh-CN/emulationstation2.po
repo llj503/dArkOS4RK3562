@@ -1397,3 +1397,12 @@ msgstr "完成。"
 
 msgid "Writing the eMMC loader is RISKY: a power loss during the write can brick the device. The current loader is backed up to /home/ark first. Update the eMMC loader to v1.10 now?"
 msgstr "写入 eMMC 引导区有风险：写入过程中断电可能导致设备变砖。当前 loader 会先备份到 /home/ark。现在把 eMMC loader 更新到 v1.10 吗？"
+
+msgid "RESTORE EMMC LOADER"
+msgstr "恢复 eMMC 引导程序"
+
+msgid "YES, RESTORE"
+msgstr "确认恢复"
+
+msgid "Restoring writes the eMMC boot area from the backup. A power loss during the write can brick the device. The current loader is backed up first. Restore now?"
+msgstr "恢复会把备份写回 eMMC 引导区：写入过程中断电可能导致设备变砖。回滚前会先备份当前 loader。现在恢复吗？"

@@ -53,7 +53,12 @@ fi
 msg "写入 $SRC (前 $((WRITE_BYTES / 1024)) KiB) -> $DEV sector $LOADER_START"
 
 mkdir -p "$BACKUP_DIR"
-BACKUP="$BACKUP_DIR/loader-backup-$(date +%Y%m%d-%H%M%S).bin"
+# 备份名带机型, 多台机器/多张卡的回滚文件不会混在一起
+DEV_MODEL=""
+[ -x /usr/local/bin/console_detect ] && DEV_MODEL="$(/usr/local/bin/console_detect -b 2>/dev/null || true)"
+[ -n "$DEV_MODEL" ] || DEV_MODEL="$(tr -d '\r\n' < /boot/.console 2>/dev/null || true)"
+[ -n "$DEV_MODEL" ] || DEV_MODEL="$(uname -n)"
+BACKUP="$BACKUP_DIR/loader-backup-${DEV_MODEL}-$(date +%Y%m%d-%H%M%S).bin"
 msg "备份现有 loader 区到 $BACKUP"
 dd if="$DEV" of="$BACKUP" bs=512 skip=$LOADER_START count=$LOADER_SECTORS \
   conv=sparse status=none || die "备份失败, 中止"

@@ -68,6 +68,10 @@ echo "== 同步 boot 分区"
 sudo rsync -a --no-owner --no-group --no-perms --exclude '.console' --exclude '.quirks_applied' --exclude 'extlinux/extlinux.conf' "$D/boot/" "$D/mnt/boot/"
 sudo chmod -R 777 "$D/mnt/boot" 2>/dev/null || true
 
+# 关机充电已改为复用 extlinux 的内核 DTB (U-Boot 运行时注入属性),
+# 早期单独生成的 rk3562-charge*.dtb 不再需要, 从镜像里清掉
+sudo rm -f "$D/mnt/boot"/rk3562-charge*.dtb
+
 echo "== 同步 rootfs"
 # /etc 是系统配置: 属主 root, 权限按源树 (es_systems.cfg 644 等静态件 root:root);
 # es_input.cfg 是 ES 运行时可写文件, 原厂归 ark, 排除避免覆盖
