@@ -1,0 +1,122 @@
+name: pocketAis-Vita3KPlus-armv8a-20261112g
+built: 2026-11-12T06:59:15Z
+qt: 6.11.0
+flags: -march=armv8-a -moutline-atomics (Cortex-A53 / ARMv8.0, no LSE)
+source: https://github.com/nckstwrt/Vita3K-Plus
+commit: 5581fb1151451fbedc64265d01742483908b87b4
+submodules:
+   82767fe38823c32536726ea798f392b0b49e66b9 external/LibAtrac9 (heads/master)
+   d8e3e2b141b8c8a167b2e3984736a6baacff316c external/SPIRV-Cross (d8e3e2b)
+   2059f0fdd73492b03d60a90c73e5038224b99093 external/VulkanMemoryAllocator-Hpp (2059f0f)
+   952f776f6573aafbb62ea717d871cd1d6816c387 external/VulkanMemoryAllocator-Hpp/Vulkan-Headers (952f776)
+   c788c52156f3ef7bc7ab769cb03c110a53ac8fcb external/VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator (c788c52)
+   ff5f55bd97a93b23d6e5cb6d192290fb49b3f002 external/boost (heads/master)
+   cd6dd7b75d126a855be1f9f76570ee5a850c6061 external/capstone (cd6dd7b)
+   6dd38b8a1dbaa7863aa907045f32308a56a6ff5d external/concurrentqueue (6dd38b8)
+   f8633c0c9217ed5499fdda391946d416c52e6809 external/cubeb (f8633c0)
+   aab6948fa863bc1cbe5d0850bc46b9ef02ed4c1a external/cubeb/cmake/sanitizers-cmake (aab6948)
+   40412d85124f7c6f3d88454583c4633e5e10fc8c external/cubeb/googletest (40412d8)
+   8f39e9fc3ad4868e6ff7188c52575087a1a02777 external/cubeb/src/cubeb-coreaudio-rs (8f39e9f)
+   6bac666467e4a37cf057f0e17e8c9e8a024b060b external/cubeb/src/cubeb-pulse-rs (6bac666)
+   39c1f1bc98ef3326237d03006f35d7dd44620e43 external/dirent (39c1f1b)
+   e98f4ee160380d7c39dc1f04e7488bcf0770d391 external/dlmalloc (heads/master)
+   86458a0bd369d63ba4c2ef812cacbb6c9080c065 external/dynarmic (86458a0)
+   02f4f2691b0efffff8923235baf146a87fc37263 external/ffmpeg (02f4f26)
+   e424e3f2e607da02742f73db84873b8084fc714c external/fmt (e424e3f)
+   fc9889c889561c5882e83819dcaffef5ed45529b external/glslang (fc9889c)
+   6910c9d9165801d8827d628cb72eb7ea9dd538c5 external/googletest (6910c9d)
+   8fae8ce254dfc1344527e05301e43f37dea2df80 external/libadrenotools (heads/master)
+   aa3975893d83ef1bc84c321ec60c65fbf1287887 external/libadrenotools/lib/linkernsbypass (heads/master)
+   d9a890b712dcdb46d3d33230997efc59f5ad8d62 external/libfat16 (heads/master)
+   86d5f2005fe1c00747348a12070fec493ea2407e external/nativefiledialog-extended (86d5f20)
+   c75def6db38f9978c55e8d27227858df911cd727 external/printf (c75def6)
+   ab1aa9b36388843f6a9f8dc86b1746f1f2a7e557 external/psvpfstools (ab1aa9b)
+   3896b7a74c70baed0e2f6039a1dbd723e5d5cc8f external/psvpfstools/libb64 (heads/master)
+   7d1e69bee7d2f08ea5754eff4463c041aacd49af external/psvpfstools/libzrif (heads/master)
+   4094450bcaac2256236d61ae3a730425ae47bd39 external/psvpfstools/psvpfsparser (4094450)
+   cb210089eb06453199578993566012493f6f7d21 external/psvpfstools/zlib (heads/master)
+   ee86beb30e4973f5feffe3ce63bfa4fbadf72f38 external/pugixml (ee86beb)
+   7f3ae3d57459e59943a4ecfefc8f6277ec6bf540 external/sdl (7f3ae3d)
+   48bcf39a661a13be22666ac64db8a7f886f2637e external/spdlog (48bcf39)
+   f0569113c93ad095470c54bf34a17b36646bbbb5 external/stb (f056911)
+   319da6b563d8da689f3b9df2fbb839edd41a1943 external/substitute (heads/main)
+   05cceee0df3b8d7c6fa87e9638af311dbabc63cb external/tracy (05cceee)
+   77f17b979678e7af0acfe708dc97a45ca6fd55e2 external/vita-toolchain (77f17b9)
+   9e0f4913866431aef48967cfb7667b085e79428b external/vita-toolchain/psp2rela (9e0f491)
+   e626a72bc2321cd320e953a0ccf1584cad60f363 external/xxHash (e626a72)
+   2f86d13775d119edbb69af52e5f566fd65c6953b external/yaml-cpp (2f86d13)
+patches: darkos/image_build/patch_vita3k.py (fork_build.h + Atrac9DecodeBounded shim)
+rpath not rewritten (resolved via LD_LIBRARY_PATH):
+  libgcc_s.so.1
+  libstdc++.so.6
+external system libraries:
+  ld-linux-aarch64.so.1	/lib/ld-linux-aarch64.so.1
+  libEGL.so.1	/lib/aarch64-linux-gnu/libEGL.so.1
+  libFLAC.so.12	/lib/aarch64-linux-gnu/libFLAC.so.12
+  libLerc.so.4	/lib/aarch64-linux-gnu/libLerc.so.4
+  libOpenGL.so.0	/lib/aarch64-linux-gnu/libOpenGL.so.0
+  libX11-xcb.so.1	/lib/aarch64-linux-gnu/libX11-xcb.so.1
+  libX11.so.6	/lib/aarch64-linux-gnu/libX11.so.6
+  libXau.so.6	/lib/aarch64-linux-gnu/libXau.so.6
+  libXdmcp.so.6	/lib/aarch64-linux-gnu/libXdmcp.so.6
+  libXext.so.6	/lib/aarch64-linux-gnu/libXext.so.6
+  libXrandr.so.2	/lib/aarch64-linux-gnu/libXrandr.so.2
+  libXrender.so.1	/lib/aarch64-linux-gnu/libXrender.so.1
+  libapparmor.so.1	/lib/aarch64-linux-gnu/libapparmor.so.1
+  libasyncns.so.0	/lib/aarch64-linux-gnu/libasyncns.so.0
+  libblkid.so.1	/lib/aarch64-linux-gnu/libblkid.so.1
+  libbrotlicommon.so.1	/lib/aarch64-linux-gnu/libbrotlicommon.so.1
+  libbrotlidec.so.1	/lib/aarch64-linux-gnu/libbrotlidec.so.1
+  libbsd.so.0	/lib/aarch64-linux-gnu/libbsd.so.0
+  libbz2.so.1.0	/lib/aarch64-linux-gnu/libbz2.so.1.0
+  libc.so.6	/lib/aarch64-linux-gnu/libc.so.6
+  libcap.so.2	/lib/aarch64-linux-gnu/libcap.so.2
+  libcrypto.so.3	/lib/aarch64-linux-gnu/libcrypto.so.3
+  libdbus-1.so.3	/lib/aarch64-linux-gnu/libdbus-1.so.3
+  libdeflate.so.0	/lib/aarch64-linux-gnu/libdeflate.so.0
+  libdl.so.2	/lib/aarch64-linux-gnu/libdl.so.2
+  libdrm.so.2	/lib/aarch64-linux-gnu/libdrm.so.2
+  libexpat.so.1	/lib/aarch64-linux-gnu/libexpat.so.1
+  libffi.so.8	/lib/aarch64-linux-gnu/libffi.so.8
+  libfontconfig.so.1	/lib/aarch64-linux-gnu/libfontconfig.so.1
+  libfreetype.so.6	/lib/aarch64-linux-gnu/libfreetype.so.6
+  libgcrypt.so.20	/lib/aarch64-linux-gnu/libgcrypt.so.20
+  libgio-2.0.so.0	/lib/aarch64-linux-gnu/libgio-2.0.so.0
+  libglib-2.0.so.0	/lib/aarch64-linux-gnu/libglib-2.0.so.0
+  libgmodule-2.0.so.0	/lib/aarch64-linux-gnu/libgmodule-2.0.so.0
+  libgobject-2.0.so.0	/lib/aarch64-linux-gnu/libgobject-2.0.so.0
+  libgpg-error.so.0	/lib/aarch64-linux-gnu/libgpg-error.so.0
+  libjbig.so.0	/lib/aarch64-linux-gnu/libjbig.so.0
+  libjpeg.so.8	/lib/aarch64-linux-gnu/libjpeg.so.8
+  liblz4.so.1	/lib/aarch64-linux-gnu/liblz4.so.1
+  liblzma.so.5	/lib/aarch64-linux-gnu/liblzma.so.5
+  libm.so.6	/lib/aarch64-linux-gnu/libm.so.6
+  libmd.so.0	/lib/aarch64-linux-gnu/libmd.so.0
+  libmount.so.1	/lib/aarch64-linux-gnu/libmount.so.1
+  libmp3lame.so.0	/lib/aarch64-linux-gnu/libmp3lame.so.0
+  libmpg123.so.0	/lib/aarch64-linux-gnu/libmpg123.so.0
+  libogg.so.0	/lib/aarch64-linux-gnu/libogg.so.0
+  libopus.so.0	/lib/aarch64-linux-gnu/libopus.so.0
+  libpcre2-8.so.0	/lib/aarch64-linux-gnu/libpcre2-8.so.0
+  libpng16.so.16	/lib/aarch64-linux-gnu/libpng16.so.16
+  libpthread.so.0	/lib/aarch64-linux-gnu/libpthread.so.0
+  libpulse.so.0	/lib/aarch64-linux-gnu/libpulse.so.0
+  libpulsecommon-16.1.so	/usr/lib/aarch64-linux-gnu/pulseaudio/libpulsecommon-16.1.so
+  libselinux.so.1	/lib/aarch64-linux-gnu/libselinux.so.1
+  libsharpyuv.so.0	/lib/aarch64-linux-gnu/libsharpyuv.so.0
+  libsndfile.so.1	/lib/aarch64-linux-gnu/libsndfile.so.1
+  libssl.so.3	/lib/aarch64-linux-gnu/libssl.so.3
+  libsystemd.so.0	/lib/aarch64-linux-gnu/libsystemd.so.0
+  libtiff.so.6	/lib/aarch64-linux-gnu/libtiff.so.6
+  libvorbis.so.0	/lib/aarch64-linux-gnu/libvorbis.so.0
+  libvorbisenc.so.2	/lib/aarch64-linux-gnu/libvorbisenc.so.2
+  libwayland-client.so.0	/lib/aarch64-linux-gnu/libwayland-client.so.0
+  libwayland-cursor.so.0	/lib/aarch64-linux-gnu/libwayland-cursor.so.0
+  libwayland-egl.so.1	/lib/aarch64-linux-gnu/libwayland-egl.so.1
+  libwebp.so.7	/lib/aarch64-linux-gnu/libwebp.so.7
+  libwebpdemux.so.2	/lib/aarch64-linux-gnu/libwebpdemux.so.2
+  libwebpmux.so.3	/lib/aarch64-linux-gnu/libwebpmux.so.3
+  libxcb.so.1	/lib/aarch64-linux-gnu/libxcb.so.1
+  libxkbcommon.so.0	/lib/aarch64-linux-gnu/libxkbcommon.so.0
+  libz.so.1	/lib/aarch64-linux-gnu/libz.so.1
+  libzstd.so.1	/lib/aarch64-linux-gnu/libzstd.so.1

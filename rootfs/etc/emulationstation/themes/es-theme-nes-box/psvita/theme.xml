@@ -1,0 +1,33 @@
+<theme>
+\t<formatVersion>7</formatVersion>
+\t<include>./../theme.xml</include>
+
+\t<view name="system">
+\t\t<image name="logo">
+\t\t\t<path>./system.png</path>
+\t\t</image>
+\t\t<image name="background_icon" extra="true">
+\t\t\t<zIndex>3</zIndex>
+\t\t\t<path>./background_icon.png</path>
+\t\t</image>
+\t</view>
+
+\t<view name="detailed, video">
+\t\t<image name="system" extra="true">
+\t\t\t<origin>0.5 0.5</origin>
+\t\t\t<pos>0.75 0.138</pos>
+\t\t\t<maxSize>0.4 0.14</maxSize>
+\t\t\t<path>./system.png</path>
+\t\t\t<zIndex>3</zIndex>
+\t\t</image>
+\t</view>
+\t<view name="basic">
+\t\t<image name="system" extra="true">
+\t\t\t<origin>0.5 0</origin>
+\t\t\t<pos>0.5 0.02</pos>
+\t\t\t<maxSize>1 .12</maxSize>
+\t\t\t<path>./system.png</path>
+\t\t\t<zIndex>3</zIndex>
+\t\t</image>
+\t</view>
+</theme>
