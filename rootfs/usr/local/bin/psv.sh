@@ -182,7 +182,12 @@ export XDG_RUNTIME_DIR="$RTDIR"
 # compositor's debug protocol to every client.
 WESTON_EXTRA=()
 [ "${PSVITA_WESTON_DEBUG:-0}" = "1" ] && WESTON_EXTRA+=(--debug)
-weston --backend=drm-backend.so --shell=kiosk-shell.so --idle-time=0 \
+# drm-backend.so hard-links libdisplay-info / libva / libseat. Keep the
+# donor-image copies in a private dir, scoped to weston only: putting
+# them in /usr/lib could shadow the baseline image vendor-tuned libs.
+WESTON_DEPS=/opt/vita3k/weston-deps
+LD_LIBRARY_PATH="$WESTON_DEPS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+    weston --backend=drm-backend.so --shell=kiosk-shell.so --idle-time=0 \
     "${WESTON_EXTRA[@]}" \
     --socket="$SOCK" --log="$DATA/weston.log" >"$DATA/weston.out" 2>&1 &
 WESTON_PID=$!
