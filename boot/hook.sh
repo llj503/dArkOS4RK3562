@@ -694,6 +694,9 @@ main() {
   # gptokeyb (onscripter 的菜单导航) 需要写 uinput
   chmod 666 /dev/uinput 2>/dev/null || true
   mkdir -p /roms/3ds 2>/dev/null || true
+  # Vita3K-Plus: hook.sh 会被提升为 firstboot.sh 每次开机执行, 幂等补建
+  mkdir -p /roms/psvita /roms/vita3k 2>/dev/null || true
+  chown ark:ark /roms/psvita /roms/vita3k 2>/dev/null || true
   [ -d /roms2 ] && mkdir -p /roms2/3ds 2>/dev/null || true
   load_wifi_modules
   # 清 RK817 POWER_EN_SAVE0/1，避免关机时 reboot-notifier 把 POWER_EN

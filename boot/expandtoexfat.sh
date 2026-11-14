@@ -203,6 +203,9 @@ sleep 5
       fi
     done
     sleep 2
+    # 首启 mkfs.exfat 会清空 /roms, 解包/复制主题后补建 Vita3K 目录
+    sudo mkdir -p /roms/psvita /roms/vita3k &> /dev/null
+    sudo chown ark:ark /roms/psvita /roms/vita3k &> /dev/null
     sudo umount /roms &> /dev/null
     sudo cp -f /boot/fstab.exfat /etc/fstab &> /dev/null
     sync
