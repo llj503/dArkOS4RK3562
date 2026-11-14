@@ -1406,3 +1406,6 @@ msgstr "确认恢复"
 
 msgid "Restoring writes the eMMC boot area from the backup. A power loss during the write can brick the device. The current loader is backed up first. Restore now?"
 msgstr "恢复会把备份写回 eMMC 引导区：写入过程中断电可能导致设备变砖。回滚前会先备份当前 loader。现在恢复吗？"
+
+msgid "COLOR TEMPERATURE"
+msgstr "色温"

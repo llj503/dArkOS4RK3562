@@ -631,6 +631,26 @@ main() {
       echo "$bl" > "$BL_SYS" 2>/dev/null && msg "Brightness: $bl"
     fi
   fi
+  # 色温 + gamma: 内核 VOP2 参数在时把保存值写回 (游戏/Kodi 也生效);
+  # 没有内核支持时 ES 启动会调用 colortemp -apply 重放
+  CT_SYS="/sys/module/rockchipdrm/parameters/colortemp"
+  CT_CONF="/home/ark/.config/colortemp.conf"
+  if [ -w "$CT_SYS" ] && [ -f "$CT_CONF" ]; then
+    ct=$(awk '$1=="kelvin" { print $2; exit }' "$CT_CONF" 2>/dev/null)
+    if [[ "$ct" =~ ^[0-9]+$ ]] && [ "$ct" -le 9000 ]; then
+      echo "$ct" > "$CT_SYS" 2>/dev/null && msg "Color temperature: ${ct}K"
+    fi
+    read -r _ gr gg gb < <(awk '$1=="gamma" { print $2, $3, $4; exit }' "$CT_CONF" 2>/dev/null) || true
+    for ch in r g b; do
+      eval "val=\$$ch"
+      [[ "$val" =~ ^[0-9]*\.?[0-9]+$ ]] || continue
+      pm=$(awk -v v="$val" 'BEGIN { printf "%d", v * 1000 + 0.5 }')
+      if [ "$pm" -ge 100 ] && [ "$pm" -le 2000 ]; then
+        echo "$pm" > "${CT_SYS}_$ch" 2>/dev/null || true
+      fi
+    done
+    msg "Color gamma restored: ${gr:-1} ${gg:-1} ${gb:-1}"
+  fi
   # gptokeyb (onscripter 的菜单导航) 需要写 uinput
   chmod 666 /dev/uinput 2>/dev/null || true
   mkdir -p /roms/3ds 2>/dev/null || true
