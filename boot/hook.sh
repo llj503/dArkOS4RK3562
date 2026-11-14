@@ -122,6 +122,43 @@ apply_ra_hotkey() {
   msg "RetroArch hotkey: $HOTKEY_TYPE -> btn $btn"
 }
 
+# ogage 全局热键: 与 arkos4clone 一致, 按机型只写一个 HOTKEY,
+# 不再同时挂 HAPPY1/SELECT/MODE 三个候选 (会误触)
+apply_ogage_hotkey() {
+  local btn f=/home/ark/ogage.conf changed="no"
+  case "${HOTKEY_TYPE:-}" in
+    mode)   btn="BTN_MODE" ;;
+    select) btn="BTN_SELECT" ;;
+    happy5) btn="BTN_TRIGGER_HAPPY5" ;;
+    *)      return 0 ;;
+  esac
+  [ -f "$f" ] || return 0
+
+  if ! grep -q "^HOTKEY=$btn$" "$f"; then
+    sed -i -E '/^HOTKEY[0-9]?=/d' "$f" 2>/dev/null || true
+    sed -i "1i HOTKEY=$btn" "$f" 2>/dev/null || true
+    changed="yes"
+  fi
+
+  # 风扇切换 (热键+START): console_detect 报告有 pwm-fan 的机型才启用
+  local fan="no"
+  [[ "${FAN:-no}" == "yes" ]] && fan="yes"
+  if [ "$fan" = "yes" ]; then
+    grep -q '^FAN_TOGGLE=yes$' "$f" || {
+      sed -i '/^FAN_TOGGLE=/d' "$f" 2>/dev/null || true
+      sed -i "1i FAN_TOGGLE=yes" "$f" 2>/dev/null || true
+      changed="yes"
+    }
+  elif grep -q '^FAN_TOGGLE=' "$f"; then
+    sed -i '/^FAN_TOGGLE=/d' "$f" 2>/dev/null || true
+    changed="yes"
+  fi
+
+  chown 1000:1000 "$f" 2>/dev/null || true
+  [ "$changed" = "yes" ] && systemctl is-active --quiet ogage && systemctl restart ogage
+  msg "ogage hotkey: $btn, fan-toggle: $fan"
+}
+
 apply_input() {
   msg "apply_input"
   cp_if_exists "$QUIRKS_DIR/retroarch64.cfg" "/home/ark/.config/retroarch/retroarch.cfg" "yes" || true
@@ -610,6 +647,9 @@ main() {
 
   # ARMSX2 (PS2) 暂停菜单: 机型热键 + X
   apply_armsx2_hotkeys
+
+  # 全局按键守护 ogage: 按机型只写一个热键 (ArkOS 同款)
+  apply_ogage_hotkey
 
   # 右摇杆/扳机轴索引按机型 (是否有模拟扳机) 修正, 每次开机都写
   apply_retroarch_axes

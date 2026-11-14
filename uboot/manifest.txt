@@ -4,11 +4,11 @@ defconfig=rk3562_defconfig
 cross_compile=/opt/toolchains/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 ddr_source=/home/lcdyk/rkbin/bin/rk35/rk3562_ddr_1332MHz_v1.10.bin
 loader_source=rk3562_spl_loader_v1.07.107.bin
-f6d6a15675f861fbaff261a7e068d2a612b6d0e2b0f500fe6bd4ccd2cb086215  /home/lcdyk/ds-build/uboot-charge-single/idblock.img
-e243243609cd45be19b7cffe4a1d7e086e354671c80644ee0ca5ecf97c346b03  /home/lcdyk/ds-build/uboot-charge-single/rk3562-download-loader.bin
-fe60e46a70ac5baed0b1150b0536e72349f493cd0064ebe5675a68c08ba82302  /home/lcdyk/ds-build/uboot-charge-single/uboot.img
-04cf3b07f4d22cd1bd189c1ea88c0bb1fc9c485331145f82d714471af8c50f9b  /home/lcdyk/ds-build/uboot-charge-single/rk3562-uboot-16m.bin
-ddfe411d7ec400d263af765c9d0cb765c08172ff632fc2f914785a7fed42a984  /home/lcdyk/ds-build/uboot-charge-single/u-boot-nodtb.bin
-e7ffa453e530d09e72c4042814ff0e90d97facacf66aa813fe384824d4c6caeb  /home/lcdyk/ds-build/uboot-charge-single/u-boot.dtb
-c8a5365e5260816642ef3a57c3c036997c50f5b796244067014117ef457a6b0f  /home/lcdyk/ds-build/uboot-charge-single/u-boot-spl.bin
-f11f4974308a54a5879bd5bb96b8e112f6d8e996540fe2422ca482de14635e60  /home/lcdyk/ds-build/uboot-charge-single/rk3562-ddr.bin
+a688503a3ec064b2e5b339a4e1199e3415138a4c77337222c302bc0497a371e5  /home/lcdyk/ds-build/uboot-vibe/idblock.img
+ddd0d506eb1aadcb994a2026b8eda3bd3130680cc83c4dc5e15efe3faf330f34  /home/lcdyk/ds-build/uboot-vibe/rk3562-download-loader.bin
+2e749f1f21250dba8b018aca45230464b6394eb5364cb71ccc68cf18600083cd  /home/lcdyk/ds-build/uboot-vibe/uboot.img
+8f6f04da5dd9e3b12f3da645480e4e6be5298c1098bc2ca60a75cae15a065be5  /home/lcdyk/ds-build/uboot-vibe/rk3562-uboot-16m.bin
+60567a35108b0ebdde6a96824e4ec7b84263701292ecab831e4651799a43d6ae  /home/lcdyk/ds-build/uboot-vibe/u-boot-nodtb.bin
+e7ffa453e530d09e72c4042814ff0e90d97facacf66aa813fe384824d4c6caeb  /home/lcdyk/ds-build/uboot-vibe/u-boot.dtb
+88cb5082ff0c20411b36772b91ddaf920b4d445e3ad25bec282ff04eea2459d5  /home/lcdyk/ds-build/uboot-vibe/u-boot-spl.bin
+f11f4974308a54a5879bd5bb96b8e112f6d8e996540fe2422ca482de14635e60  /home/lcdyk/ds-build/uboot-vibe/rk3562-ddr.bin

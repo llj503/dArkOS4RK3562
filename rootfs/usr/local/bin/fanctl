@@ -4,6 +4,7 @@
 #   fanctl on      开启 (绑定驱动, 恢复温度自动控制)
 #   fanctl off     关闭 (PWM 0 + 解绑驱动, 兼容 .FAN_DISABLED 标记)
 #   fanctl apply   开机应用 /home/ark/.config/fan.cfg
+#   fanctl toggle  最大(255) <-> 关闭 之间切换
 #   fanctl status  输出当前状态
 if [ ! -e /sys/devices/platform/pwm-fan ]; then
 	[ "$1" = "status" ] && echo "MODE=none"
@@ -84,6 +85,21 @@ case "$1" in
 		set_pwm 0
 		unbind_drv
 		;;
+	toggle)
+		cur=0
+		p=$(find_pwm) && cur=$(cat "$p" 2>/dev/null || echo 0)
+		case "$cur" in ''|*[!0-9]*) cur=0 ;; esac
+		if bound && [ "$cur" -ge 250 ]; then
+			MODE=off; PWM=0; save
+			touch "$FLAG"
+			set_pwm 0
+			unbind_drv
+		else
+			MODE=manual; PWM=255; save
+			rm -f "$FLAG"
+			bind_drv && set_pwm 255 || exit 1
+		fi
+		;;
 	apply)
 		case "$MODE" in
 			off)    touch "$FLAG"; set_pwm 0; unbind_drv ;;
@@ -97,7 +113,7 @@ case "$1" in
 			"$(cat "$(find_pwm)" 2>/dev/null || echo n/a)"
 		;;
 	*)
-		echo "usage: fanctl {set N|on|off|apply|status}" >&2
+		echo "usage: fanctl {set N|on|off|toggle|apply|status}" >&2
 		exit 2
 		;;
 esac

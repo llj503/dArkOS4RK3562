@@ -65,7 +65,7 @@ trap 'sudo "$D/scripts/mount_arkos.sh" unmount >/dev/null 2>&1' EXIT
 
 echo "== 同步 boot 分区"
 # 不加 --delete: 保留 .console 等运行时状态 (工作副本测试启动会留下, 发布时清理)
-sudo rsync -a --no-owner --no-group --no-perms --exclude '.console' --exclude '.quirks_applied' --exclude 'extlinux/extlinux.conf' "$D/boot/" "$D/mnt/boot/"
+sudo rsync -a --no-owner --no-group --no-perms --exclude '.console' --exclude '.quirks_applied' --exclude 'extlinux/extlinux.conf' --exclude '*Zone.Identifier*' "$D/boot/" "$D/mnt/boot/"
 sudo chmod -R 777 "$D/mnt/boot" 2>/dev/null || true
 
 # 关机充电已改为复用 extlinux 的内核 DTB (U-Boot 运行时注入属性),
@@ -76,12 +76,12 @@ echo "== 同步 rootfs"
 # /etc 是系统配置: 属主 root, 权限按源树 (es_systems.cfg 644 等静态件 root:root);
 # es_input.cfg 是 ES 运行时可写文件, 原厂归 ark, 排除避免覆盖
 if [ -d "$D/rootfs/etc" ]; then
-  sudo rsync -a --chown=0:0 --exclude 'emulationstation/es_input.cfg' \
+  sudo rsync -a --chown=0:0 --exclude 'emulationstation/es_input.cfg' --exclude '*Zone.Identifier*' \
     "$D/rootfs/etc/" "$D/mnt/root/etc/"
 fi
 # 其余 (usr/local/bin /opt /home/ark 等) 沿用 ArkOS 惯例: ark:1000 + 777
 sudo rsync -a --chown=1000:1000 --chmod=D0777,F0777 \
-  --exclude '/etc' --exclude '*.so.xz' "$D/rootfs/" "$D/mnt/root/"
+  --exclude '/etc' --exclude '*.so.xz' --exclude '*Zone.Identifier*' "$D/rootfs/" "$D/mnt/root/"
 
 # 基准镜像里 klibc-utils 安装时残留的临时文件 (132KB 静态 ELF,
 # 不在 dpkg md5sums、也不被 ld.so.cache 引用), 顺手清掉
@@ -144,6 +144,12 @@ sudo rm -f "$D/mnt/root/etc/systemd/system/fanctl.service" \
            "$D/mnt/root/etc/systemd/system/multi-user.target.wants/fanctl.service" \
            "$D/mnt/root/etc/systemd/system/basic.target.wants/fan-state.service" \
            "$D/mnt/root/etc/systemd/system/basic.target.wants/led-state.service"
+
+# 风扇切换 (热键+L1+R1) 已并入 ogage, 不再单独起守护单元
+sudo rm -f "$D/mnt/root/etc/systemd/system/fan-hotkey.service" \
+           "$D/mnt/root/etc/systemd/system/multi-user.target.wants/fan-hotkey.service" \
+           "$D/mnt/root/usr/local/bin/fan-hotkey" \
+           "$D/mnt/root/home/ark/.config/fan-hotkey.log"
 
 # wifi-driver-load.service 已被 hook.sh 的 load_wifi_modules 取代:
 # 源树不再带 override.conf, 这里直接 mask 掉镜像里的原厂单元, 防止它抢跑
