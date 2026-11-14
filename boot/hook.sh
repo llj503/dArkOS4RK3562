@@ -239,6 +239,8 @@ apply_private_duckstation() {
   rm -rf "$DS_PRIV_DIR.tmp"
   chmod -R 777 "$DS_PRIV_DIR" 2>/dev/null || true
   printf '%s\n' "$stamp" > "$DS_PRIV_STAMP"
+  # 一次性输入: 装好后删掉 boot 分区上的压缩包, 不再长期占用 32MB
+  rm -f "$t" 2>/dev/null && msg "Removed $t after install"
   sync
   msg "Private duckstation-mini-zh installed: $stamp"
 }
