@@ -30,6 +30,8 @@ CARD_MAP = {
     ("resolution-multiplier", "2"): ("选项 · 画面倍率", "选项 · 画面倍率 = 2x 清晰"),
     ("guest-cores", "2"): ("选项 · 性能", "选项 · 性能 = 省电 2核"),
     ("guest-cores", "3"): ("选项 · 性能", "选项 · 性能 = 平衡 3核"),
+    ("performance-overlay", "true"): ("选项 · 帧率显示", "选项 · 帧率显示 = 开"),
+    ("performance-overlay", "false"): ("选项 · 帧率显示", "选项 · 帧率显示 = 关"),
 }
 
 
