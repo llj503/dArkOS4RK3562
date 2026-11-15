@@ -42,7 +42,7 @@ Select+Start always SIGKILLs Vita3K (it swallows SIGTERM) and exits; the
 launcher's EXIT trap then brings ES back.
 
 The handheld game-grid frontend (vita3k-frontend-wl.c) writes
-/roms/vita3k/.frontend-active while it owns the screen; this mapper then stands
+/roms/psvita/Vita3k/.frontend-active while it owns the screen; this mapper then stands
 down completely (no OSD, no forwarded keys) and resumes as soon as the frontend
 removes the flag and execs Vita3K.
 
@@ -94,9 +94,9 @@ DPAD_STEP = 9           # px per tick while a d-pad direction is held
 TICK = 0.02             # 50 Hz pointer updates
 STATE_CHECK_INTERVAL = 5.0  # seconds between game-state journal polls
 MAPPER_STARTED_AT = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-OSD_ACTIVE = "/roms/vita3k/.osd-active"
+OSD_ACTIVE = "/roms/psvita/Vita3k/.osd-active"
 OSD_BIN = "/usr/local/bin/vita3k-osd"
-FRONTEND_ACTIVE = "/roms/vita3k/.frontend-active"
+FRONTEND_ACTIVE = "/roms/psvita/Vita3k/.frontend-active"
 
 
 def hotkey_code():
@@ -368,7 +368,7 @@ def main():
                                         # Vita3K's runuser env, not to us.
                                         env["XDG_RUNTIME_DIR"] = "/run/vita3k"
                                         env["WAYLAND_DISPLAY"] = "wayland-vita3k"
-                                        with open("/roms/vita3k/vita3k-osd.log", "a") as logf:
+                                        with open("/roms/psvita/Vita3k/vita3k-osd.log", "a") as logf:
                                             subprocess.Popen([OSD_BIN], env=env,
                                                              stdout=logf, stderr=logf)
                                         print("vita3k-pad: opened OSD", flush=True)

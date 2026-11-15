@@ -11,7 +11,7 @@
 #          for the Vita3K GUI (firmware install, settings, app list).
 #
 # Installed as /usr/local/bin/psv.sh (dArkOS launcher naming); bundle in /opt/vita3k
-# and all Vita data (firmware, installed games, config, cache) in /roms/vita3k.
+# and all Vita data (firmware, installed games, config, cache) in /roms/psvita/Vita3k.
 set -u
 
 # Ports -> "Vita3K 高级设置" passes --native-gui; a plain no-ROM launch shows
@@ -32,7 +32,7 @@ case "$ROM" in
 esac
 
 BUNDLE=/opt/vita3k
-DATA=/roms/vita3k
+DATA=/roms/psvita/Vita3k
 RTDIR=/run/vita3k
 SOCK=wayland-vita3k
 

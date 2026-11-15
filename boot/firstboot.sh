@@ -10,7 +10,7 @@
 
 timeout 600 /boot/expandtoexfat.sh > /dev/tty1 2>&1
 
-# psvita (Vita3K-Plus): ES system dir + Vita data dir must be created
+# psvita (Vita3K-Plus): game dir + Vita3k data/firmware dirs must be created
 # AFTER expandtoexfat.sh (first boot mkfs.exfat would wipe them).
-mkdir -p /roms/psvita /roms/vita3k 2>/dev/null || true
-chown ark:ark /roms/psvita /roms/vita3k 2>/dev/null || true
+mkdir -p /roms/psvita /roms/psvita/Vita3k /roms/psvita/Vita3k/firmware 2>/dev/null || true
+chown ark:ark /roms/psvita /roms/psvita/Vita3k /roms/psvita/Vita3k/firmware 2>/dev/null || true

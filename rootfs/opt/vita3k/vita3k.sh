@@ -10,7 +10,7 @@ export LD_LIBRARY_PATH="$HERE/lib:$HERE${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
 # Portable mode keeps config.yml, firmware and installed games inside the
-# bundle. On dArkOS /opt/vita3k/portable is a symlink to /roms/vita3k so the
+# bundle. On dArkOS /opt/vita3k/portable is a symlink to /roms/psvita/Vita3k so the
 # small rootfs is not filled up by Vita content.
 if [ ! -e "$HERE/portable" ]; then
     mkdir -p "$HERE/portable" 2>/dev/null || true

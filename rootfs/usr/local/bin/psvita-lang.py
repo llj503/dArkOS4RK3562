@@ -25,11 +25,11 @@ import sys
 import time
 
 ES_CFG = pathlib.Path("/home/ark/.emulationstation/es_settings.cfg")
-CFG = pathlib.Path("/roms/vita3k/config.yml")
+CFG = pathlib.Path("/roms/psvita/Vita3k/config.yml")
 CARD_DIR = pathlib.Path("/roms/psvita")
-UI_LANG = pathlib.Path("/roms/vita3k/.ui-lang")
-MANUAL = pathlib.Path("/roms/vita3k/.lang-manual")
-LOG = pathlib.Path("/roms/vita3k/es-option.log")
+UI_LANG = pathlib.Path("/roms/psvita/Vita3k/.ui-lang")
+MANUAL = pathlib.Path("/roms/psvita/Vita3k/.lang-manual")
+LOG = pathlib.Path("/roms/psvita/Vita3k/es-option.log")
 
 LANG_GROUPS = {
     "zh": ("选项 · 系统语言", "选项 · 系统语言 = 简体中文", "11"),

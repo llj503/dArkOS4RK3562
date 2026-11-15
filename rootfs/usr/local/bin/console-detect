@@ -8,7 +8,7 @@
 # table and /boot/.console is absent, so fall back to a local override file.
 set -u
 BIN=/usr/local/bin/console_detect
-OVERRIDE=/roms/vita3k/.hotkey-type
+OVERRIDE=/roms/psvita/Vita3k/.hotkey-type
 
 case "${1:-}" in
     -t|--hotkey) ;;

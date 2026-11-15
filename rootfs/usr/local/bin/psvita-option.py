@@ -3,7 +3,7 @@
 
 Usage: psvita-option.py <group> <card-stem> <config-key> <value>
 
-- rewrites one flat key in /roms/vita3k/config.yml
+- rewrites one flat key in /roms/psvita/Vita3k/config.yml
 - marks the chosen card with a star so ES shows which option is active
 - restarts ES (no-block) so the renamed card is visible
 
@@ -16,11 +16,11 @@ import subprocess
 import sys
 import time
 
-CFG = "/roms/vita3k/config.yml"
+CFG = "/roms/psvita/Vita3k/config.yml"
 CARD_DIR = pathlib.Path("/roms/psvita")
-LOG = "/roms/vita3k/es-option.log"
-PENDING = pathlib.Path("/roms/vita3k/.osd-pending")
-MANUAL_LANG = pathlib.Path("/roms/vita3k/.lang-manual")
+LOG = "/roms/psvita/Vita3k/es-option.log"
+PENDING = pathlib.Path("/roms/psvita/Vita3k/.osd-pending")
+MANUAL_LANG = pathlib.Path("/roms/psvita/Vita3k/.lang-manual")
 
 # key/value chosen in the in-game OSD -> ES card group + card stem
 CARD_MAP = {
