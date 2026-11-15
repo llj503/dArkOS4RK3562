@@ -580,8 +580,11 @@ static void write_pending(const MenuItem *it) {
     fprintf(f, "%s=%s\n", it->key, it->value);
     /* detail=0 is "minimum" on current upstream, but some 1.4 builds treat
      * it as off. detail=1 renders "FPS: N (xx ms)" on both. */
-    if (!strcmp(it->key, "performance-overlay") && !strcmp(it->value, "true"))
+    if (!strcmp(it->key, "performance-overlay") && !strcmp(it->value, "true")) {
         fputs("performance-overlay-detail=1\n", f);
+        /* 2 = top-right; keeps the badge out of the game's HUD area. */
+        fputs("performance-overlay-position=2\n", f);
+    }
     fclose(f);
 }
 

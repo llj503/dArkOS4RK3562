@@ -62,7 +62,7 @@ wait-for-debugger: false
 color-surface-debug: false
 performance-overlay: false
 performance-overlay-detail: 0
-performance-overlay-position: 0
+performance-overlay-position: 2
 screenshot-format: 1
 disable-motion: false
 controller-analog-multiplier: 1
