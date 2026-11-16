@@ -32,6 +32,8 @@ case "$ROM" in
 esac
 
 BUNDLE=/opt/vita3k
+VITABIN="$BUNDLE/bin"
+WESTON_HOME="$BUNDLE/weston"
 DATA=/roms/psvita/Vita3k
 RTDIR=/run/vita3k
 SOCK=wayland-vita3k
@@ -138,7 +140,7 @@ cleanup() {
     # Settings chosen in the in-game OSD are applied only now: Vita3K rewrites
     # config.yml on exit, so writing it while the game runs would be lost.
     if [ -f "$DATA/.osd-pending" ]; then
-        python3 /usr/local/bin/psvita-option.py --apply-pending >/dev/null 2>&1 || true
+        python3 "$VITABIN/psvita-option.py" --apply-pending >/dev/null 2>&1 || true
     fi
     restore_governors
     systemctl restart killer_daemon.service >/dev/null 2>&1 || true
@@ -160,7 +162,7 @@ set_governors
 # launchers (es_settings.cfg <string name="Language" value="zh-CN" />).
 # Vita3K's equivalent is config.yml sys-lang: 11 (简体中文) / 1 (English US).
 # An explicit choice from the OSD or an ES option card wins.
-python3 /usr/local/bin/psvita-lang.py --sync >/dev/null 2>&1 || true
+python3 "$VITABIN/psvita-lang.py" --sync >/dev/null 2>&1 || true
 
 # Do not use logind's /run/user/1000: it is a per-session tmpfs that exists
 # only while an ark login session is alive (an SSH debugging session creates
@@ -182,12 +184,12 @@ export XDG_RUNTIME_DIR="$RTDIR"
 # compositor's debug protocol to every client.
 WESTON_EXTRA=()
 [ "${PSVITA_WESTON_DEBUG:-0}" = "1" ] && WESTON_EXTRA+=(--debug)
-# drm-backend.so hard-links libdisplay-info / libva / libseat. Keep the
-# donor-image copies in a private dir, scoped to weston only: putting
-# them in /usr/lib could shadow the baseline image vendor-tuned libs.
-WESTON_DEPS=/opt/vita3k/weston-deps
-LD_LIBRARY_PATH="$WESTON_DEPS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-    weston --backend=drm-backend.so --shell=kiosk-shell.so --idle-time=0 \
+# Weston lives in the app bundle; only its two module directories are
+# reachable from /usr (symlinks into $WESTON_HOME/lib), because weston resolves
+# backends and shells at the compiled-in paths. libseat is not in the base
+# image, so it ships next to libweston and is found via LD_LIBRARY_PATH.
+LD_LIBRARY_PATH="$WESTON_HOME/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+    "$WESTON_HOME/bin/weston" --backend=drm-backend.so --shell=kiosk-shell.so --idle-time=0 \
     "${WESTON_EXTRA[@]}" \
     --socket="$SOCK" --log="$DATA/weston.log" >"$DATA/weston.out" 2>&1 &
 WESTON_PID=$!
@@ -221,7 +223,7 @@ echo "VAR=Vita3K" > /home/ark/.config/KILLIT
 # with the pad present at startup), and "-1 Vita3K -sudokill" leaves its kill
 # target empty, so Select+Start runs `kill -9` with no pid, the shell prints a
 # usage error and gptokeyb exits -- taking every mapped key down with it.
-PAD_MAPPER=/usr/local/bin/vita3k-pad.py
+PAD_MAPPER="$VITABIN/vita3k-pad.py"
 PAD_PID=
 if [ -r "$PAD_MAPPER" ]; then
     chmod 666 /dev/uinput 2>/dev/null || true
@@ -366,17 +368,17 @@ setup_panel() {
     env -u LD_PRELOAD -u LD_LIBRARY_PATH \
         -u VK_ADD_IMPLICIT_LAYER_PATH -u QT_QPA_PLATFORM -u QT_PLUGIN_PATH \
         HOME=/home/ark XDG_RUNTIME_DIR="$RTDIR" WAYLAND_DISPLAY="$SOCK" \
-        /usr/local/bin/vita3k-osd --setup
+        "$VITABIN/vita3k-osd" --setup
     rm -f "$DATA/.frontend-active"
     ACTION=$(head -1 "$DATA/.osd-action" 2>/dev/null)
     rm -f "$DATA/.osd-action"
     # No Vita3K process is running yet, so settings can be applied right away.
     if [ -f "$DATA/.osd-pending" ]; then
-        python3 /usr/local/bin/psvita-option.py --apply-pending >/dev/null 2>&1 || true
+        python3 "$VITABIN/psvita-option.py" --apply-pending >/dev/null 2>&1 || true
     fi
 }
 
-if [ -n "$ROM" ] && ! firmware_ok && [ -x /usr/local/bin/vita3k-osd ]; then
+if [ -n "$ROM" ] && ! firmware_ok && [ -x "$VITABIN/vita3k-osd" ]; then
     echo "psvita: firmware/font missing -> quick settings setup" >&2
     for _ in $(seq 1 10); do
         ACTION=
@@ -406,13 +408,13 @@ fi
 # No ROM + not explicitly asking for the Qt GUI: run the handheld frontend.
 # It inherits this session's environment and execs Vita3K itself when the user
 # picks a game, so the EXIT trap above still owns the whole session lifetime.
-if [ -z "$ROM" ] && [ "$NATIVE_GUI" -eq 0 ] && [ -x /usr/local/bin/vita3k-frontend ]; then
+if [ -z "$ROM" ] && [ "$NATIVE_GUI" -eq 0 ] && [ -x "$VITABIN/vita3k-frontend" ]; then
     echo "psvita: starting handheld frontend" >&2
     rm -f "$DATA/.frontend-active"
     runuser -u ark -- env \
         HOME=/home/ark USER=ark LOGNAME=ark \
         XDG_RUNTIME_DIR="$RTDIR" WAYLAND_DISPLAY="$SOCK" \
-        /usr/local/bin/vita3k-frontend
+        "$VITABIN/vita3k-frontend"
     exit 0
 fi
 

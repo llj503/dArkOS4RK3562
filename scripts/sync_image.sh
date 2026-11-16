@@ -23,6 +23,8 @@ set -euo pipefail
 D=$(cd "$(dirname "$0")/.." && pwd)
 BASE="$D/dArkOS_rg52mini_trixie_06242026.img"
 WORK="$D/dArkOS3562_work.img"
+# 版本号: 镜像名与 plymouth 标题共用同一日期, 可用 DARKOS_BUILD_DATE 固定复现
+BUILD_DATE="${DARKOS_BUILD_DATE:-$(date +%Y%m%d)}"
 
 RELEASE=no
 CI=no
@@ -67,6 +69,16 @@ trap 'sudo "$D/scripts/mount_arkos.sh" unmount >/dev/null 2>&1' EXIT
 sudo rm -f "$D/mnt/root/home/ark/.config/retroarch/cores/mametiger_libretro.so" \
            "$D/mnt/root/home/ark/.config/retroarch/cores/mametiger_libretro.info"
 
+# freej2me 独立版迁到 /opt/freej2mesa, 清掉早期放在 freej2me_files 的重复文件
+sudo rm -f "$D/mnt/root/usr/local/bin/freej2me_files/freej2me-sdl.jar" \
+           "$D/mnt/root/usr/local/bin/freej2me_files/sdl_interface" \
+           "$D/mnt/root/usr/local/bin/freej2me_files/libaudio.so" \
+           "$D/mnt/root/usr/local/bin/freej2me_files/libm3g.so" \
+           "$D/mnt/root/usr/local/bin/freej2me_files/libmicro3d.so" \
+           "$D/mnt/root/usr/local/bin/freej2me_files/keymap.cfg" \
+           "$D/mnt/root/usr/local/bin/freej2me_files/font.ttf" \
+           "$D/mnt/root/usr/local/bin/freej2me-sa.sh"
+
 # 精简 /opt/system 工具菜单: 去掉不再提供的脚本
 sudo rm -f \
   "$D/mnt/root/opt/system/Advanced/Swap Start+Select with FN+Back.sh" \
@@ -78,6 +90,38 @@ sudo rm -f \
   "$D/mnt/root/opt/system/Enable Remote Services.sh" \
   "$D/mnt/root/opt/system/Disable Remote Services.sh" \
   "$D/mnt/root/opt/system/Update.sh"
+
+# PSV (Vita3K-Plus) 早期把整套 donor Weston/Xwayland/GStreamer 栈铺进 /usr。
+# 现在运行时只在 /opt/vita3k/weston, /usr 仅保留两个模块目录软链 (下面 rsync
+# 重新创建), 其余 X11 位图字体、gst 插件、iso-codes、weston demo 客户端全部清掉。
+R="$D/mnt/root"
+sudo rm -rf "$R/usr/lib/aarch64-linux-gnu/libweston-14" \
+            "$R/usr/lib/aarch64-linux-gnu/weston" \
+            "$R/usr/lib/aarch64-linux-gnu/gstreamer-1.0" \
+            "$R/usr/lib/aarch64-linux-gnu/gstreamer1.0" \
+            "$R/usr/share/weston" "$R/usr/share/fonts/X11" \
+            "$R/usr/share/iso-codes" "$R/usr/share/xml/iso-codes" \
+            "$R/usr/share/wayland-sessions" "$R/usr/share/gst-plugins-base" \
+            "$R/var/lib/xkb" "$R/opt/vita3k/weston-deps"
+sudo rm -f "$R/usr/bin/weston" "$R/usr/bin/weston-"* "$R/usr/bin/Xwayland" \
+           "$R/usr/bin/xkb"* "$R/usr/bin/bdftopcf" "$R/usr/bin/bdftruncate" \
+           "$R/usr/bin/fonttosfnt" "$R/usr/bin/mkfontdir" "$R/usr/bin/mkfontscale" \
+           "$R/usr/bin/png-fix-itxt" "$R/usr/bin/pngfix" "$R/usr/bin/ucs2any" \
+           "$R/usr/bin/wcap-decode" \
+           "$R/usr/sbin/update-fonts-alias" "$R/usr/sbin/update-fonts-dir" \
+           "$R/usr/sbin/update-fonts-scale" \
+           "$R/usr/libexec/weston-"* "$R/usr/share/aclocal/fontutil.m4" \
+           "$R/usr/lib/aarch64-linux-gnu/libweston-14.so.0"* \
+           "$R/usr/lib/aarch64-linux-gnu/libseat.so.1"
+for pat in libXfont2 libfontenc libfreerdp libwinpr3 libneatvnc liburiparser \
+           libxcvt libxcb-composite libgst liborc libvisual libjson-c libturbojpeg \
+           libaml libcdda; do
+  sudo rm -f "$R/usr/lib/aarch64-linux-gnu/$pat"*
+done
+# PSV 辅助程序随 bundle 走 /opt/vita3k/bin
+sudo rm -f "$R/usr/local/bin/psvita-lang.py" "$R/usr/local/bin/psvita-option.py" \
+           "$R/usr/local/bin/vita3k-pad.py" "$R/usr/local/bin/vita3k-frontend" \
+           "$R/usr/local/bin/vita3k-osd"
 
 echo "== 同步 boot 分区"
 # 不加 --delete: 保留 .console 等运行时状态 (工作副本测试启动会留下, 发布时清理)
@@ -125,6 +169,14 @@ if [ -f "$SCUMM_XZ" ]; then
   echo "✓ 解压 /opt/scummvm/scummvm"
 fi
 
+# 品牌: 与 arkos4clone 相同, 构建时改写基础镜像里的 plymouth 标题。
+# 镜像名和标题共用 BUILD_DATE, 避免两者日期不一致。
+PLYMOUTH_THEME="$D/mnt/root/usr/share/plymouth/themes/text.plymouth"
+if [[ -f "$PLYMOUTH_THEME" ]]; then
+  sudo sed -i "s|^title=.*|title=dArkOS 3562 ($BUILD_DATE)|" "$PLYMOUTH_THEME"
+  echo "✓ plymouth 标题: dArkOS 3562 ($BUILD_DATE)"
+fi
+
 # 基准镜像里 klibc-utils 安装时残留的临时文件 (132KB 静态 ELF,
 # 不在 dpkg md5sums、也不被 ld.so.cache 引用), 顺手清掉
 sudo find "$D/mnt/root/usr/lib" -maxdepth 1 -name 'klibc-*.so' -delete 2>/dev/null || true
@@ -156,13 +208,6 @@ fi
 sudo rm -f "$D/mnt/root/etc/udev/rules.d/99-joystick-invert.rules"
 sudo rm -f "$D/mnt/root/opt/system/Tools/Left Stick Invert Toggle.sh"
 
-# ZT9101: 相对固件路径已在驱动源码里改为基于 /lib/firmware/zt9101/ 解析,
-# cfg 默认值也指向该目录, 不再需要 modprobe 覆盖; 固件按厂商布局放 fw/ 子目录,
-# 清掉早期平铺在 zt9101/ 根下的旧副本
-sudo rm -f "$D/mnt/root/etc/modprobe.d/zt9101.conf"
-sudo rm -f "$D/mnt/root/usr/lib/firmware/zt9101/ZT9101_fw_c1ab8ba.bin" \
-           "$D/mnt/root/usr/lib/firmware/zt9101/ZT9101V30_fw_8546b3a.bin"
-
 # DuckStation 只保留官方 mini AppImage; 自编 GPL 版及相关切换文件已废弃
 sudo rm -rf "$D/mnt/root/opt/duckstation/duckstationsa" \
             "$D/mnt/root/opt/duckstation/lib" \
@@ -172,13 +217,6 @@ sudo rm -f "$D/mnt/root/usr/local/bin/standalone-duckstation-gpl" \
            "$D/mnt/root/usr/local/bin/standalone-duckstation-official" \
            "$D/mnt/root/usr/local/bin/duckstation-backend" \
            "$D/mnt/root/home/ark/.config/duckstation.backend"
-
-# Vita3K-Plus (PSV) 已回归: /opt/vita3k 由源树提供, 不可删除。
-# 只清理早期版本的遗留 Wayland ICD / 配置 / 旧启动器。
-sudo rm -rf "$D/mnt/root/opt/malisx2-wayland" \
-            "$D/mnt/root/home/ark/.config/Vita3K"
-sudo rm -f "$D/mnt/root/usr/local/bin/vita3k.sh" \
-           "$D/mnt/root/usr/local/bin/vita3k-install-firmware.sh"
 
 # LED/风扇持久化改为 ES 启动时执行 darkos-hw-apply.sh, 删除 systemd 单元
 sudo rm -f "$D/mnt/root/etc/systemd/system/fanctl.service" \
@@ -240,8 +278,7 @@ sudo "$D/scripts/mount_arkos.sh" unmount >/dev/null
 trap - EXIT
 
 if [[ "$RELEASE" == "yes" && "$CI" == "no" ]]; then
-  base=$(basename "$IMG" .img)
-  out="$D/${base}_$(date +%m%d%Y).img"
+  out="$D/dArkOS3562_${BUILD_DATE}.img"
   echo "== 复制发布镜像: $out"
   cp --reflink=auto --sparse=always "$IMG" "$out"
   sha256sum "$out" > "$out.sha256"
