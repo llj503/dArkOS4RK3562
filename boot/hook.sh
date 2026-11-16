@@ -375,6 +375,7 @@ apply_all_quirks() {
   apply_es_setting
   apply_joy_conf
   apply_sdl_rotation "$SCREEN_ROTATION"
+  apply_vita3k_hotkeys
 }
 
 # ==================== 附加处理 ====================
@@ -478,6 +479,27 @@ apply_armsx2_hotkeys() {
     chown 1000:1000 "$f" 2>/dev/null || true
   done
   msg "ARMSX2 hotkey: $hk + X (OpenPauseMenu)"
+}
+
+# Vita3K-Plus: quick-settings menu = console_detect hotkey + X (evdev 307).
+# Written on first boot / device change via apply_all_quirks, plus a
+# missing-file fallback on every boot; psv.sh / vita3k-pad.py only read it.
+apply_vita3k_hotkeys() {
+  local hk d f
+  case "$HOTKEY_TYPE" in
+    select) hk=314 ;;
+    mode)   hk=316 ;;
+    *)      hk=316 ;;
+  esac
+  for d in /roms /roms2; do
+    [ -d "$d" ] || continue
+    f="$d/psvita/Vita3k"
+    mkdir -p "$f" 2>/dev/null || continue
+    printf '%s\n' "$HOTKEY_TYPE" > "$f/.hotkey-type"
+    printf 'HOTKEY=%s\nBUTTON=307\n' "$hk" > "$f/.menu-combo"
+    chown 1000:1000 "$f/.hotkey-type" "$f/.menu-combo" 2>/dev/null || true
+  done
+  msg "Vita3K menu: hotkey($HOTKEY_TYPE)=$hk + X=307"
 }
 
 # RetroArch udev 手柄的轴编号按"已存在的 ABS 轴"压缩, 不是 evdev 的 ABS 码:
@@ -697,6 +719,7 @@ main() {
   # Vita3K-Plus: hook.sh 会被提升为 firstboot.sh 每次开机执行, 幂等补建
   mkdir -p /roms/psvita /roms/psvita/Vita3k /roms/psvita/Vita3k/firmware 2>/dev/null || true
   chown ark:ark /roms/psvita /roms/psvita/Vita3k /roms/psvita/Vita3k/firmware 2>/dev/null || true
+  [ -f /roms/psvita/Vita3k/.menu-combo ] || apply_vita3k_hotkeys
   [ -d /roms2 ] && mkdir -p /roms2/3ds 2>/dev/null || true
   load_wifi_modules
   # 清 RK817 POWER_EN_SAVE0/1，避免关机时 reboot-notifier 把 POWER_EN

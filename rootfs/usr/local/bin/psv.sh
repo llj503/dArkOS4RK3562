@@ -10,7 +10,7 @@
 #     rom  .vpk/.zip/folder to install and run, an installed TITLEID, or empty
 #          for the Vita3K GUI (firmware install, settings, app list).
 #
-# Installed as /usr/local/bin/psv.sh; chain continues via /usr/local/bin/vita3k
+# Installed as /usr/local/bin/psv.sh (dArkOS launcher naming); bundle in /opt/vita3k
 # and all Vita data (firmware, installed games, config, cache) in /roms/psvita/Vita3k.
 set -u
 
@@ -32,13 +32,7 @@ case "$ROM" in
 esac
 
 BUNDLE=/opt/vita3k
-if [ -n "${VITA3K_DATA:-}" ]; then
-    DATA=$VITA3K_DATA
-elif [ -d /roms2/psvita ]; then
-    DATA=/roms2/psvita/Vita3k
-else
-    DATA=/roms/psvita/Vita3k
-fi
+DATA=/roms/psvita/Vita3k
 RTDIR=/run/vita3k
 SOCK=wayland-vita3k
 
@@ -58,8 +52,8 @@ fi
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-if [ ! -x /usr/local/bin/vita3k ]; then
-    echo "psvita: /usr/local/bin/vita3k is missing" >&2
+if [ ! -x "$BUNDLE/vita3k.sh" ]; then
+    echo "psvita: $BUNDLE/vita3k.sh is missing" >&2
     systemctl start emulationstation
     exit 1
 fi
@@ -277,7 +271,7 @@ fi
 # so VK_ADD_IMPLICIT_LAYER_PATH is the switch -- VK_ADD_LAYER_PATH only covers
 # explicit layers and silently does nothing here. Scoped to this process tree,
 # the rest of the system keeps using the blob directly.
-WSI_DIR=/opt/vita3k-wsi
+WSI_DIR=/opt/vita3k/wsi
 if [ -r "$WSI_DIR/VkLayer_window_system_integration.json" ]; then
     export VK_ADD_IMPLICIT_LAYER_PATH="$WSI_DIR${VK_ADD_IMPLICIT_LAYER_PATH:+:$VK_ADD_IMPLICIT_LAYER_PATH}"
 else
@@ -396,7 +390,7 @@ if [ -n "$ROM" ] && ! firmware_ok && [ -x /usr/local/bin/vita3k-osd ]; then
                         -u VK_ADD_IMPLICIT_LAYER_PATH \
                         HOME=/home/ark XDG_RUNTIME_DIR="$RTDIR" \
                         QT_QPA_PLATFORM=offscreen SDL_VIDEODRIVER=offscreen \
-                        /usr/local/bin/vita3k --firmware "$_path" \
+                        "$BUNDLE/vita3k.sh" --firmware "$_path" \
                         >>"$DATA/firmware-install.log" 2>&1 || true
                 fi
                 # Both components present -> go straight into the game.
@@ -425,4 +419,4 @@ fi
 runuser -u ark -- env \
     HOME=/home/ark USER=ark LOGNAME=ark \
     XDG_RUNTIME_DIR="$RTDIR" WAYLAND_DISPLAY="$SOCK" \
-    /usr/local/bin/vita3k "${ARGS[@]}"
+    "$BUNDLE/vita3k.sh" "${ARGS[@]}"

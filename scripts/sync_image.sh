@@ -57,11 +57,6 @@ done
 
 echo "== 源树检查: boot $(find "$D/boot" -type f | wc -l) 文件, rootfs $(find "$D/rootfs" -type f | wc -l) 文件"
 
-# Vita3K 等独立模拟器: 先从 psvita/vita3k 源目录刷新 rootfs 差异层
-if [[ -x "$D/psvita/vita3k/install.sh" ]]; then
-  echo "== 同步 Vita3K 源目录 -> rootfs"
-  "$D/psvita/vita3k/install.sh" "$D"
-fi
 echo "== 刷写开源 uboot (原厂 uboot 无法引导我们的内核)"
 sudo "$D/uboot/flash_uboot.sh" "$IMG"
 

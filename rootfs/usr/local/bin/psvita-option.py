@@ -58,7 +58,7 @@ def mark_group(group, stem):
 def apply_pending():
     """Apply settings picked in the in-game OSD.
 
-    Called from psv.sh cleanup AFTER Vita3K exits: Vita3K rewrites
+    Called from psvita-launch.sh cleanup AFTER Vita3K exits: Vita3K rewrites
     config.yml on shutdown, so writing it while the game runs would be lost.
     No ES restart here -- the launcher starts ES right after this call.
     """

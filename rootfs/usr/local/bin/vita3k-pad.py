@@ -13,7 +13,7 @@ the actual game state:
 
   game  ES launched a title (cmdline contains `-r TITLEID`):
         original keyboard mapping. Buttons land on the same Vita button as
-        SDL's own mapping (psv.sh primes config.yml to match:
+        SDL's own mapping (psvita-launch.sh primes config.yml to match:
         cross=Enter, circle=Escape, square=Space, triangle=Backspace,
         start=Insert, select=Delete, L1/R1/L2/R2=PageUp/PageDown/Home/End).
 
@@ -99,18 +99,32 @@ OSD_BIN = "/usr/local/bin/vita3k-osd"
 FRONTEND_ACTIVE = "/roms/psvita/Vita3k/.frontend-active"
 
 
-def hotkey_code():
-    """Single source of truth: hotkey type comes from `console-detect -t`.
+MENU_COMBO_FILE = "/roms/psvita/Vita3k/.menu-combo"
 
-    happy5 boards use the Menu/Home key (evdev 316); `select` boards use
-    Select (314). Everything else falls back to happy5.
+
+def menu_combo():
+    """hotkey + X opens the quick-settings panel.
+
+    hook.sh writes .menu-combo on first boot / device change from
+    console_detect's HOTKEY_TYPE; no per-game console_detect call.
     """
+    hotkey, button = 316, 307
+    try:
+        for line in open(MENU_COMBO_FILE):
+            k, _, v = line.strip().partition("=")
+            if k == "HOTKEY":
+                hotkey = int(v)
+            elif k == "BUTTON":
+                button = int(v)
+        return hotkey, button
+    except Exception:
+        pass
     try:
         kind = subprocess.run(["console-detect", "-t"], capture_output=True,
                               text=True, timeout=5).stdout.strip()
     except Exception:
         kind = ""
-    return 314 if kind == "select" else 316
+    return (314 if kind == "select" else 316), button
 
 UI_SET_EVBIT = 0x40045564
 UI_SET_KEYBIT = 0x40045565
@@ -293,11 +307,11 @@ def main():
         return True
 
     mode = detect_mode()
-    osd_hotkey = hotkey_code()
+    osd_hotkey, menu_button = menu_combo()
     session_is_gui = (mode == "gui")  # Ports GUI (no -r); no game was ever booted
     pointer_enabled = False           # GUI uses arrow keys + A/B by default
     last_state_check = 0.0
-    print(f"vita3k-pad: mode={mode} hotkey={osd_hotkey} (console-detect -t), "
+    print(f"vita3k-pad: mode={mode} menu={osd_hotkey}+{menu_button} (hook.sh), "
           f"keyboard nav; Select+R3 = pointer; journal auto-sync", flush=True)
 
     def pointer_tick():
@@ -350,10 +364,14 @@ def main():
                                 if code == START and val == 1 and SELECT in pad.active_keys():
                                     kill_target()
                                     return 0
-                                # Home/Menu (or Select on `select` boards) opens
-                                # the SDL2 OSD. Vita3K's own PS menu is disabled
-                                # by patch_vita3k.py, so there is no conflict.
-                                if code == osd_hotkey and val == 1:
+                                # Menu hotkey is a modifier: never forward it.
+                                if code == osd_hotkey:
+                                    continue
+                                # hotkey + X opens the quick-settings OSD;
+                                # Vita3K's own PS menu is disabled by
+                                # patch_vita3k.py, so there is no conflict.
+                                if code == menu_button and val == 1 and \
+                                        osd_hotkey in pad.active_keys():
                                     if not os.path.exists(OSD_ACTIVE):
                                         # The launcher exports LD_PRELOAD (real
                                         # libwayland-client) for Qt/libMali and a
