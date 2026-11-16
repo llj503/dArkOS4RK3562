@@ -1,0 +1,8 @@
+source: https://github.com/ginkage/vulkan-wsi-layer
+commit: 40cfec09d0e2d42c5e1f2642cf4cba11e7008112
+vulkan-headers: v1.4.368
+flags: -march=armv8-a -moutline-atomics
+wsi: wayland only (x11/headless/display off)
+allocator: dma_buf_heaps, heap system-uncached
+install: /opt/vita3k-wsi
+enable: VK_ADD_IMPLICIT_LAYER_PATH=/opt/vita3k-wsi

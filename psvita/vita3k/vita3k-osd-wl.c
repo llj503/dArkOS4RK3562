@@ -3,7 +3,7 @@
  * Two modes:
  *   default  : opened DURING A GAME by vita3k-pad.py (console-detect -t key).
  *              A settings grid; A writes .osd-pending, applied on game exit.
- *   --setup : opened by psvita-launch.sh BEFORE the game boots when the PS Vita
+ *   --setup : opened by psv.sh BEFORE the game boots when the PS Vita
  *              firmware (fs/vs0) or font package (fs/sa0) is missing. Vita3K's
  *              own modal "Missing Firmware" / welcome dialog is never shown.
  *              Adds "install firmware" / "install font" cards that open a

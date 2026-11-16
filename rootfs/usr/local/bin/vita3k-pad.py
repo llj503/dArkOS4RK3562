@@ -13,7 +13,7 @@ the actual game state:
 
   game  ES launched a title (cmdline contains `-r TITLEID`):
         original keyboard mapping. Buttons land on the same Vita button as
-        SDL's own mapping (psvita-launch.sh primes config.yml to match:
+        SDL's own mapping (psv.sh primes config.yml to match:
         cross=Enter, circle=Escape, square=Space, triangle=Backspace,
         start=Insert, select=Delete, L1/R1/L2/R2=PageUp/PageDown/Home/End).
 

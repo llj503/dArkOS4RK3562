@@ -1,0 +1,11 @@
+#!/bin/bash
+# /usr/local/bin/vita3k - thin entry to the bundle's own launcher.
+# Full chain: ES -> /usr/local/bin/psv.sh -> /usr/local/bin/vita3k
+#             -> /opt/vita3k/vita3k.sh -> Vita3K
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+BUNDLE=/opt/vita3k
+if [ ! -x "$BUNDLE/vita3k.sh" ]; then
+    echo "vita3k: $BUNDLE/vita3k.sh is missing" >&2
+    exit 1
+fi
+exec "$BUNDLE/vita3k.sh" "$@"
