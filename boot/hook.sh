@@ -169,7 +169,7 @@ apply_input() {
 
 
 # ==================== 国际化 ====================
-# PC 端 dtb 选择器选择中文时写 /boot/.cn; 开机应用一次后删除 (同 arkos4clone)
+# PC 端 dtb 选择器选择中文时写 /boot/.cn; 只在首启/切换设备应用 (不每启重放)
 apply_localization() {
   local lang="$1" es_lang ra_lang ppsspp_lang ppsspp_from
   case "$lang" in
@@ -368,6 +368,16 @@ apply_sdl_rotation() {
   done
 }
 
+apply_tools_gamelist() {
+  # /opt/system 工具菜单的显示名: 中文/英文两份 gamelist 放在 quirks 里,
+  # 只在首启和切换设备时按 /boot/.cn 选一份复制成 /opt/system/gamelist.xml
+  local lang="$1" src="$QUIRKS_DIR/option-gamelist-$1.xml"
+  [[ -f "$src" ]] || { warn "gamelist missing: $src"; return 0; }
+  cp_if_exists "$src" "/opt/system/gamelist.xml" "yes" || true
+  chown 0:0 /opt/system/gamelist.xml 2>/dev/null || true
+  msg "Tools gamelist: $lang"
+}
+
 apply_all_quirks() {
   msg "Applying quirks for: $DEVICE_NAME"
   [[ -d "$QUIRKS_DIR" ]] || { warn "QUIRKS_DIR missing: $QUIRKS_DIR"; return 0; }
@@ -376,6 +386,13 @@ apply_all_quirks() {
   apply_joy_conf
   apply_sdl_rotation "$SCREEN_ROTATION"
   apply_vita3k_hotkeys
+  if [[ -f /boot/.cn ]]; then
+    apply_localization cn
+    apply_tools_gamelist cn
+  else
+    apply_localization en
+    apply_tools_gamelist en
+  fi
 }
 
 # ==================== 附加处理 ====================
@@ -635,17 +652,7 @@ main() {
     set_hostname "$DEVICE_NAME"
   fi
 
-  # 语言只认 PC 端 dtbselector 写的 /boot/.cn (选中文=存在, 选 English=删除),
-  # 机身不再弹框选择; 每次开机把 ES/RA/PPSSPP 同步到该选择.
-  # ES 本构建没有语言菜单, 设置只能写进 es_settings.cfg.
-  local es_lang_cur
-  es_lang_cur=$(sed -n 's|.*<string name="Language" value="\([^"]*\)".*|\1|p' \
-    /home/ark/.emulationstation/es_settings.cfg 2>/dev/null | head -n1)
-  if [ -f /boot/.cn ]; then
-    [ "$es_lang_cur" = "zh-CN" ] || apply_localization cn
-  elif [ "$es_lang_cur" = "zh-CN" ]; then
-    apply_localization en
-  fi
+  # 语言与工具菜单 gamelist 只在首启/切换设备时应用 (见 apply_all_quirks)
 
   apply_private_duckstation
 

@@ -63,6 +63,22 @@ sudo "$D/uboot/flash_uboot.sh" "$IMG"
 sudo "$D/scripts/mount_arkos.sh" mount "$IMG" >/dev/null
 trap 'sudo "$D/scripts/mount_arkos.sh" unmount >/dev/null 2>&1' EXIT
 
+# 基础镜像自带 mametiger_libretro.so (269MB), es_systems 里没有任何引用, 删掉腾空间
+sudo rm -f "$D/mnt/root/home/ark/.config/retroarch/cores/mametiger_libretro.so" \
+           "$D/mnt/root/home/ark/.config/retroarch/cores/mametiger_libretro.info"
+
+# 精简 /opt/system 工具菜单: 去掉不再提供的脚本
+sudo rm -f \
+  "$D/mnt/root/opt/system/Advanced/Swap Start+Select with FN+Back.sh" \
+  "$D/mnt/root/opt/system/Advanced/Disable Fan.sh" \
+  "$D/mnt/root/opt/system/Advanced/Fix Global Hotkeys.sh" \
+  "$D/mnt/root/opt/system/Advanced/Fix Audio.sh" \
+  "$D/mnt/root/opt/system/LED Settings.sh" \
+  "$D/mnt/root/opt/system/Wifi.sh" \
+  "$D/mnt/root/opt/system/Enable Remote Services.sh" \
+  "$D/mnt/root/opt/system/Disable Remote Services.sh" \
+  "$D/mnt/root/opt/system/Update.sh"
+
 echo "== 同步 boot 分区"
 # 不加 --delete: 保留 .console 等运行时状态 (工作副本测试启动会留下, 发布时清理)
 sudo rsync -a --no-owner --no-group --no-perms --exclude '.console' --exclude '.quirks_applied' --exclude 'extlinux/extlinux.conf' --exclude '*Zone.Identifier*' "$D/boot/" "$D/mnt/boot/"
@@ -99,6 +115,15 @@ fi
 # 其余 (usr/local/bin /opt /home/ark 等) 沿用 ArkOS 惯例: ark:1000 + 777
 sudo rsync -a --chown=1000:1000 --chmod=D0777,F0777 \
   --exclude '/etc' --exclude '*.so.xz' --exclude '*Zone.Identifier*' "$D/rootfs/" "$D/mnt/root/"
+
+# ScummVM 全引擎二进制 113MB, 超过 GitHub 单文件 100MB 限制: 仓库存 .xz, 同步时解压
+SCUMM_XZ="$D/mnt/root/opt/scummvm/scummvm.xz"
+if [ -f "$SCUMM_XZ" ]; then
+  sudo xz -dc "$SCUMM_XZ" | sudo tee "$D/mnt/root/opt/scummvm/scummvm" >/dev/null
+  sudo chmod 755 "$D/mnt/root/opt/scummvm/scummvm"
+  sudo rm -f "$SCUMM_XZ"
+  echo "✓ 解压 /opt/scummvm/scummvm"
+fi
 
 # 基准镜像里 klibc-utils 安装时残留的临时文件 (132KB 静态 ELF,
 # 不在 dpkg md5sums、也不被 ld.so.cache 引用), 顺手清掉

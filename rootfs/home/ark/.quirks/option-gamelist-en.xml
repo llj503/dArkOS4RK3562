@@ -1,0 +1,131 @@
+<?xml version="1.0"?>
+<gameList>
+	<folder>
+		<path>./Advanced</path>
+		<name>Advanced</name>
+	</folder>
+	<folder>
+		<path>./Tools</path>
+		<name>Tools</name>
+	</folder>
+	<folder>
+		<path>./Tools/ThemeMaster</path>
+		<name>ThemeMaster Resources</name>
+	</folder>
+	<game>
+		<path>./351Files.sh</path>
+		<name>351Files</name>
+	</game>
+	<game>
+		<path>./Bluetooth.sh</path>
+		<name>Bluetooth</name>
+	</game>
+	<game>
+		<path>./Change Password.sh</path>
+		<name>Change Password</name>
+	</game>
+	<game>
+		<path>./File Manager.sh</path>
+		<name>File Manager</name>
+	</game>
+	<game>
+		<path>./Network Info.sh</path>
+		<name>Network Info</name>
+	</game>
+	<game>
+		<path>./PS1 - Delete m3u files.sh</path>
+		<name>PS1 - Delete m3u files</name>
+	</game>
+	<game>
+		<path>./PS1 - Generate m3u files.sh</path>
+		<name>PS1 - Generate m3u files</name>
+	</game>
+	<game>
+		<path>./Remove ._ Files.sh</path>
+		<name>Remove ._ Files</name>
+	</game>
+	<game>
+		<path>./System Info.sh</path>
+		<name>System Info</name>
+	</game>
+	<game>
+		<path>./USB Drive Mount.sh</path>
+		<name>Mount USB Drive</name>
+	</game>
+	<game>
+		<path>./USB Drive Unmount.sh</path>
+		<name>Unmount USB Drive</name>
+	</game>
+	<game>
+		<path>./Advanced/Backup dArkOS Settings.sh</path>
+		<name>Backup dArkOS Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Clear Last Played Collection.sh</path>
+		<name>Clear Last Played Collection</name>
+	</game>
+	<game>
+		<path>./Advanced/Controller Tester.sh</path>
+		<name>Controller Tester</name>
+	</game>
+	<game>
+		<path>./Advanced/Enable Quick Mode.sh</path>
+		<name>Enable Quick Mode</name>
+	</game>
+	<game>
+		<path>./Advanced/Reset Retroarch32 Core Settings.sh</path>
+		<name>Reset RetroArch32 Core Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Reset Retroarch32 Settings.sh</path>
+		<name>Reset RetroArch32 Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Reset Retroarch Core Settings.sh</path>
+		<name>Reset RetroArch Core Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Reset Retroarch Settings.sh</path>
+		<name>Reset RetroArch Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore dArkOS Settings.sh</path>
+		<name>Restore dArkOS Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default BigPEmu Settings.sh</path>
+		<name>Restore Default BigPEmu Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default Drastic Settings.sh</path>
+		<name>Restore Default Drastic Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default GZdoom Settings.sh</path>
+		<name>Restore Default GZDoom Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default LZdoom Settings.sh</path>
+		<name>Restore Default LZDoom Settings</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default PPSSPP Controls.sh</path>
+		<name>Restore Default PPSSPP Controls</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore ECWolf Joystick.sh</path>
+		<name>Restore ECWolf Joystick</name>
+	</game>
+	<game>
+		<path>./Advanced/Switch to SD2 for Roms.sh</path>
+		<name>Switch ROMs to SD2</name>
+	</game>
+	<game>
+		<path>./Tools/Install.PortMaster.sh</path>
+		<name>Install PortMaster</name>
+	</game>
+	<game>
+		<path>./Tools/ThemeMaster.sh</path>
+		<name>ThemeMaster</name>
+	</game>
+</gameList>

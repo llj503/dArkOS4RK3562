@@ -1,0 +1,131 @@
+<?xml version="1.0"?>
+<gameList>
+	<folder>
+		<path>./Advanced</path>
+		<name>高级功能</name>
+	</folder>
+	<folder>
+		<path>./Tools</path>
+		<name>工具软件</name>
+	</folder>
+	<folder>
+		<path>./Tools/ThemeMaster</path>
+		<name>主题大师资源</name>
+	</folder>
+	<game>
+		<path>./351Files.sh</path>
+		<name>351文件管理器</name>
+	</game>
+	<game>
+		<path>./Bluetooth.sh</path>
+		<name>蓝牙管理</name>
+	</game>
+	<game>
+		<path>./Change Password.sh</path>
+		<name>修改密码</name>
+	</game>
+	<game>
+		<path>./File Manager.sh</path>
+		<name>文件管理器</name>
+	</game>
+	<game>
+		<path>./Network Info.sh</path>
+		<name>网络信息</name>
+	</game>
+	<game>
+		<path>./PS1 - Delete m3u files.sh</path>
+		<name>删除 PS1 m3u 文件</name>
+	</game>
+	<game>
+		<path>./PS1 - Generate m3u files.sh</path>
+		<name>生成 PS1 m3u 文件</name>
+	</game>
+	<game>
+		<path>./Remove ._ Files.sh</path>
+		<name>清理 ._ 文件</name>
+	</game>
+	<game>
+		<path>./System Info.sh</path>
+		<name>系统信息</name>
+	</game>
+	<game>
+		<path>./USB Drive Mount.sh</path>
+		<name>挂载 U 盘</name>
+	</game>
+	<game>
+		<path>./USB Drive Unmount.sh</path>
+		<name>卸载 U 盘</name>
+	</game>
+	<game>
+		<path>./Advanced/Backup dArkOS Settings.sh</path>
+		<name>备份 dArkOS 设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Clear Last Played Collection.sh</path>
+		<name>清除最近游玩收藏</name>
+	</game>
+	<game>
+		<path>./Advanced/Controller Tester.sh</path>
+		<name>手柄测试</name>
+	</game>
+	<game>
+		<path>./Advanced/Enable Quick Mode.sh</path>
+		<name>开启快速模式</name>
+	</game>
+	<game>
+		<path>./Advanced/Reset Retroarch32 Core Settings.sh</path>
+		<name>重置 RetroArch32 核心设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Reset Retroarch32 Settings.sh</path>
+		<name>重置 RetroArch32 设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Reset Retroarch Core Settings.sh</path>
+		<name>重置 RetroArch 核心设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Reset Retroarch Settings.sh</path>
+		<name>重置 RetroArch 设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore dArkOS Settings.sh</path>
+		<name>恢复 dArkOS 设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default BigPEmu Settings.sh</path>
+		<name>恢复 BigPEmu 默认设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default Drastic Settings.sh</path>
+		<name>恢复 Drastic 默认设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default GZdoom Settings.sh</path>
+		<name>恢复 GZDoom 默认设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default LZdoom Settings.sh</path>
+		<name>恢复 LZDoom 默认设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore Default PPSSPP Controls.sh</path>
+		<name>恢复 PPSSPP 默认按键</name>
+	</game>
+	<game>
+		<path>./Advanced/Restore ECWolf Joystick.sh</path>
+		<name>恢复 ECWolf 摇杆设置</name>
+	</game>
+	<game>
+		<path>./Advanced/Switch to SD2 for Roms.sh</path>
+		<name>ROM 切换到 SD2</name>
+	</game>
+	<game>
+		<path>./Tools/Install.PortMaster.sh</path>
+		<name>安装 PortMaster</name>
+	</game>
+	<game>
+		<path>./Tools/ThemeMaster.sh</path>
+		<name>主题大师</name>
+	</game>
+</gameList>
