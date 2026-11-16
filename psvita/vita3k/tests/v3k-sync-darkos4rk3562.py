@@ -256,7 +256,9 @@ def main():
     for name, text, mode in (("vita3k", WRAPPER, 0o755),
                              ("vita3k-paths.sh", PATHS, 0o644),
                              ("install.sh", INSTALL, 0o755),
-                             ("build.sh", BUILD, 0o755)):
+                             ("build.sh", BUILD, 0o755),
+                             (".gitattributes",
+                              "* text eol=lf\n*.png binary\n*.so binary\n", 0o644)):
         if put(SRC / name, text, mode):
             changed.append("psvita/vita3k/" + name)
 
