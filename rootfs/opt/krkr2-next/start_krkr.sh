@@ -39,7 +39,10 @@ export SDL_GAMECONTROLLERCONFIG_FILE=/opt/inttools/gamecontrollerdb.txt
 
 GP=""
 
-cd "$CFG" || exit 1
+GAMEDIR="$(dirname "$ROM")"
+[ -d "$GAMEDIR" ] || GAMEDIR="$CFG"
+# 以游戏目录为工作目录: 存档(savecheck/savedata)和 per-game 配置都在这里
+cd "$GAMEDIR" || cd "$CFG" || exit 1
 "$APP/krkr2" "$ROM" 2>&1 | tee -a "$CFG/log.txt"
 rc=${PIPESTATUS[0]}
 
