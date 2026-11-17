@@ -3,14 +3,28 @@
 # dArkOS 开机钩子 (arkos4clone clone.sh 结构的 rk3562 实现)
 #
 # 原版机制 (对齐 ~/arkos4clone/boot/dArkOS/clone.sh):
-#   * 首启: expandtoexfat.sh 调本脚本 → 写 .console/hostname → 全量 quirks
-#     应用 → 本脚本在首启后成为 /boot/firstboot.sh, firstboot.service
-#     **不关闭** → 每次开机都执行
-#   * 每次开机: console_detect -b (读 extlinux/boot.ini 的 FDT → 设备名)
-#     与 /boot/.console 比较 —— **DTB 变化检测**; dtbselector 换 FDT 后
-#     -b 返回新设备名 != .console 旧值 → 触发全量 quirks 应用
-#     (SDL2/SDL3 旋转库替换 + RA/ES/PPSSPP 输入配置)
+#   * 首启: firstboot.sh 先跑本脚本 → 写 .console/hostname → 全量 quirks
+#     应用 → expandtoexfat.sh 扩容并解包 /roms.tar → 本脚本被提升为
+#     /boot/firstboot.sh, firstboot.service **不关闭** → 每次开机都执行
+#   * 每次开机: console_detect -b (读 extlinux 里的 FDT → 设备名) 与
+#     /boot/.console 比较 —— **DTB 变化检测**; dtbselector 换 FDT 后
+#     新设备名 != .console 旧值 → 触发全量 quirks 应用
 #   * runtime device-tree model 与 .console 不一致同样触发
+#
+# 分工 (两条执行路径, 不要混):
+#   A. 仅首启/换机型 (main 的 if/elif 分支 → apply_all_quirks):
+#      hostname、RA/ES/PPSSPP 输入配置、SDL 旋转库、语言+gamelist、
+#      ogage 热键、RetroArch 摇杆轴号、私编中文 DuckStation 安装。
+#      换语言 = dtbselector 改 FDT/写 .cn → 换机型 → 这里重新应用。
+#   B. 每次开机 (main 末尾): 只做"状态被内核/devicefs 重置"的项 —
+#      /dev/uinput 权限、Vita3K 热键缺失兜底、WiFi 驱动、rk817 关机/音频、
+#      fontconfig 缓存、ldconfig、RA duckstation 核心 BIOS 路径。
+#   扩容/ROM 解包只由 expandtoexfat.sh 负责 (它自带的 fast-path 会在
+#   p5 已是 exfat 且上次扩容完整时把自己提升 hook 并退出), 本脚本不碰.
+#   背光/色温由 brightness-watch.service 开机恢复并常驻保存.
+#   DuckStation / ARMSX2 热键由各自启动器在每次启动时写 (模拟器会重写 ini).
+#
+# 机型专属文件放在 /home/ark/.quirks, 由 sync_image.sh 同步进镜像.
 # 日志: /boot/hook_log.txt
 # ============================================================
 
@@ -393,6 +407,12 @@ apply_all_quirks() {
     apply_localization en
     apply_tools_gamelist en
   fi
+  # 以下三项都只跟"机型/语言"有关, 只在首启/换机型时写 (语言变化同样走
+  # dtbselector -> 换机型 -> 这里重新应用):
+  #   ogage 全局热键、RetroArch 摇杆/扳机轴号、私编中文 DuckStation 安装
+  apply_ogage_hotkey
+  apply_retroarch_axes
+  apply_private_duckstation
 }
 
 # ==================== 附加处理 ====================
@@ -443,59 +463,6 @@ apply_fc_cache() {
   if [ ! -d /var/cache/fontconfig ] || ! ls /var/cache/fontconfig/* >/dev/null 2>&1; then
     fc-cache -f >/dev/null 2>&1 && msg "fontconfig cache rebuilt"
   fi
-}
-
-apply_duckstation_hotkeys() {
-  local hk s block
-  # 与 gamecontrollerdb 对应: mode=BTN_MODE(HOME)->Guide, select=Back,
-  # happy5=BTN_TRIGGER_HAPPY5->Misc1 (该键在 rk3562 手柄上不存在, 别混用)
-  case "$HOTKEY_TYPE" in
-    select) hk="SDL-0/Back" ;;
-    mode)   hk="SDL-0/Guide" ;;
-    *)      hk="SDL-0/Misc1" ;;
-  esac
-  s="/home/ark/.local/share/duckstation/settings.ini"
-  if [ ! -f "$s" ]; then
-    mkdir -p "$(dirname "$s")"
-    cp /opt/duckstation/settings.ini.template "$s" 2>/dev/null || return 0
-  fi
-  sed -i --follow-symlinks -E '/^(OpenPauseMenu|LoadSelectedSaveState|SaveSelectedSaveState|FastForward) =/d' "$s" 2>/dev/null || true
-  block="OpenPauseMenu = $hk & SDL-0/X
-LoadSelectedSaveState = $hk & SDL-0/LeftTrigger
-SaveSelectedSaveState = $hk & SDL-0/RightTrigger
-FastForward = $hk & SDL-0/LeftShoulder"
-  if grep -q '^\[Hotkeys\]' "$s"; then
-    awk -v b="$block" '{ print } /^\[Hotkeys\]/{ print b }' "$s" > "$s.tmp" && mv "$s.tmp" "$s"
-  else
-    printf '\n[Hotkeys]\n%s\n' "$block" >> "$s"
-  fi
-  chown 1000:1000 "$s" 2>/dev/null || true
-  msg "DuckStation hotkeys: $hk + X/L2/R2/L1"
-}
-
-# ARMSX2 (PS2): OpenPauseMenu = 机型 hotkey + X (PCSX2.ini 的 [Hotkeys] 段;
-# SDL 绑定名见 SDLInputSource.cpp, 本机 SDL 映射 x:b3 -> FaceWest)
-apply_armsx2_hotkeys() {
-  local hk f
-  case "$HOTKEY_TYPE" in
-    select) hk="SDL-0/Back" ;;
-    mode)   hk="SDL-0/Guide" ;;
-    *)      hk="SDL-0/Misc1" ;;
-  esac
-  local line="OpenPauseMenu = $hk & SDL-0/FaceWest"
-  local b
-  for b in /roms /roms2; do
-    f="$b/ps2/armsx2/.config/ARMSX2/inis/PCSX2.ini"
-    [ -f "$f" ] || continue
-    sed -i -E '/^OpenPauseMenu[[:space:]]*=/d' "$f" 2>/dev/null || true
-    if grep -q '^\[Hotkeys\]' "$f"; then
-      awk -v l="$line" '{ print } /^\[Hotkeys\]/{ print l }' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
-    else
-      printf '\n[Hotkeys]\n%s\n' "$line" >> "$f"
-    fi
-    chown 1000:1000 "$f" 2>/dev/null || true
-  done
-  msg "ARMSX2 hotkey: $hk + X (OpenPauseMenu)"
 }
 
 # Vita3K-Plus: quick-settings menu = console_detect hotkey + X (evdev 307).
@@ -621,6 +588,7 @@ main() {
     msg "Running depmod -a"
     depmod -a 2>/dev/null || true
   elif [[ "$dtb_changed" == "yes" || "$cur_val" != "$DEVICE_NAME" ]]; then
+    # 切换设备
     local old_device="$cur_val" new_device
     if [[ "$dtb_changed" == "yes" ]]; then
       new_device="$bootini_device"
@@ -652,82 +620,24 @@ main() {
     set_hostname "$DEVICE_NAME"
   fi
 
-  # 语言与工具菜单 gamelist 只在首启/切换设备时应用 (见 apply_all_quirks)
+  # 语言、ogage 热键、RetroArch 轴号、私编 DuckStation 只在首启/换机型时应用
+  # (见 apply_all_quirks); DuckStation / ARMSX2 的热键由各自启动器在启动时写,
+  # 因为这两个模拟器会把自己的 ini 重写回默认值.
 
-  apply_private_duckstation
-
-  # 已扩容的卡上不应再执行首启扩容: 清掉残留脚本, 避免换机型时再次进入
-  if [ -f /boot/expandtoexfat.sh ] && [ ! -f /boot/fstab.exfat ]; then
-    for pdev in /dev/mmcblk0p5 /dev/mmcblk1p5; do
-      if [ -b "$pdev" ] && lsblk -no FSTYPE "$pdev" 2>/dev/null | grep -qi exfat; then
-        if [ -f /boot/hook.sh ] && grep -q expandtoexfat /boot/firstboot.sh 2>/dev/null; then
-          cp -f /boot/hook.sh /boot/firstboot.sh
-          rm -f /boot/hook.sh
-        fi
-        rm -f /boot/expandtoexfat.sh
-        msg "expandtoexfat.sh removed (ROM partition already exfat)"
-        break
-      fi
-    done
-  fi
-
-  # DuckStation 热键按机型热键类型生成 (happy5=FN/Misc1, select=Back)
-  apply_duckstation_hotkeys
-
-  # ARMSX2 (PS2) 暂停菜单: 机型热键 + X
-  apply_armsx2_hotkeys
-
-  # 全局按键守护 ogage: 按机型只写一个热键 (ArkOS 同款)
-  apply_ogage_hotkey
-
-  # 右摇杆/扳机轴索引按机型 (是否有模拟扳机) 修正, 每次开机都写
-  apply_retroarch_axes
-
-  # RetroArch 的 DuckStation 核心需要 BIOS 搜索路径, 否则核心无法启动
+  # RetroArch 的 DuckStation 核心需要 BIOS 搜索路径, 否则核心无法启动.
+  # 该行属于 duckstation 核心选项, 跑别的核心时 RA 保存选项可能把它丢掉,
+  # 所以每次开机补一次 (已有则跳过).
   ROPT=/home/ark/.config/retroarch/retroarch-core-options.cfg
   if [ -d /home/ark/.config/retroarch ] && ! grep -q '^duckstation_BIOS.SearchDirectory' "$ROPT" 2>/dev/null; then
     echo 'duckstation_BIOS.SearchDirectory = "/roms/bios"' >> "$ROPT"
   fi
 
-  # 每次开机都做的轻量项
-  # 亮度持久化: ES 只写 sysfs 不保存, brightness-watch 服务负责落盘,
-  # 这里开机恢复; 没有记录时不动背光 (保持内核/dtb 默认)
-  BL_CFG="/home/ark/.config/brightness.level"
-  BL_SYS="/sys/class/backlight/backlight/brightness"
-  if [ -w "$BL_SYS" ] && [ -f "$BL_CFG" ]; then
-    bl=$(cat "$BL_CFG" 2>/dev/null || true)
-    if [[ "$bl" =~ ^[0-9]+$ ]] && [ "$bl" -le 255 ]; then
-      echo "$bl" > "$BL_SYS" 2>/dev/null && msg "Brightness: $bl"
-    fi
-  fi
-  # 色温 + gamma: 内核 VOP2 参数在时把保存值写回 (游戏/Kodi 也生效);
-  # 没有内核支持时 ES 启动会调用 colortemp -apply 重放
-  CT_SYS="/sys/module/rockchipdrm/parameters/colortemp"
-  CT_CONF="/home/ark/.config/colortemp.conf"
-  if [ -w "$CT_SYS" ] && [ -f "$CT_CONF" ]; then
-    ct=$(awk '$1=="kelvin" { print $2; exit }' "$CT_CONF" 2>/dev/null)
-    if [[ "$ct" =~ ^[0-9]+$ ]] && [ "$ct" -le 9000 ]; then
-      echo "$ct" > "$CT_SYS" 2>/dev/null && msg "Color temperature: ${ct}K"
-    fi
-    read -r _ gr gg gb < <(awk '$1=="gamma" { print $2, $3, $4; exit }' "$CT_CONF" 2>/dev/null) || true
-    for ch in r g b; do
-      eval "val=\$$ch"
-      [[ "$val" =~ ^[0-9]*\.?[0-9]+$ ]] || continue
-      pm=$(awk -v v="$val" 'BEGIN { printf "%d", v * 1000 + 0.5 }')
-      if [ "$pm" -ge 100 ] && [ "$pm" -le 2000 ]; then
-        echo "$pm" > "${CT_SYS}_$ch" 2>/dev/null || true
-      fi
-    done
-    msg "Color gamma restored: ${gr:-1} ${gg:-1} ${gb:-1}"
-  fi
+  # ==================== 每次开机 (状态会被重置的项) ====================
+  # 背光/色温的恢复放在 brightness-watch.service 启动时执行 (sysfs/kernel
+  # module 参数每次开机都回到默认, 该服务本来就在开机时启动并常驻).
   # gptokeyb (onscripter 的菜单导航) 需要写 uinput
   chmod 666 /dev/uinput 2>/dev/null || true
-  mkdir -p /roms/3ds 2>/dev/null || true
-  # Vita3K-Plus: hook.sh 会被提升为 firstboot.sh 每次开机执行, 幂等补建
-  mkdir -p /roms/psvita /roms/psvita/Vita3k /roms/psvita/Vita3k/firmware 2>/dev/null || true
-  chown ark:ark /roms/psvita /roms/psvita/Vita3k /roms/psvita/Vita3k/firmware 2>/dev/null || true
   [ -f /roms/psvita/Vita3k/.menu-combo ] || apply_vita3k_hotkeys
-  [ -d /roms2 ] && mkdir -p /roms2/3ds 2>/dev/null || true
   load_wifi_modules
   # 清 RK817 POWER_EN_SAVE0/1，避免关机时 reboot-notifier 把 POWER_EN
   # 恢复回去导致关机后自启；与 ROCKNIX 的 not-save-power-en 等价.

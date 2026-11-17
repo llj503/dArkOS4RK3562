@@ -49,36 +49,40 @@ dArkOS 3562 是面向 RK3562 掌机的 Debian 游戏系统：以 EmulationStatio
 
 | 平台 | 实现 | 说明 |
 |---|---|---|
-| PS2 | ARMSX2 | Vulkan + `malisx2`；BIOS 放 `/roms/ps2/bios`；`ps2.sh` 启动 |
+| PS2 | ARMSX2 | Vulkan + `malisx2 0.5.1`；BIOS 放 `/roms/bios`；`ps2.sh` 启动 |
 | GameCube / Wii | Dolphin NoGUI | 默认 Vulkan，`VK_KHR_display` 直出 KMS；`dolphin.sh` |
 | PS1 | DuckStation 官方 mini AppImage | 每机型热键；设置/存档放 ROM 分区；BIOS 放 `/roms/bios` |
-| PSP | PPSSPP / PPSSPP 2021 | 两个版本可选，保留多后端 |
+| PSP | PPSSPP / PPSSPP 2021 | 两个版本可选；2021 版已启用 Vulkan（`VK_KHR_display`），同时保留 GLES 后端 |
 | NDS | DSperate / DraStic | DSperate 走系统 Vulkan + 中文界面；需要 NDS BIOS |
 | Saturn | YabaSanshiro | 共 4 个版本；需要 BIOS |
 | Dreamcast | Flycast 2.7 / Flycast 2022 | 两个版本均支持 Vulkan |
 | PS Vita | Vita3K-Plus | 独立 Wayland 会话；运行库集中在 `/opt/vita3k` |
 | J2ME | FreeJ2ME | 独立版，中文字体与手柄映射已内置 |
-| Flash | Ruffle | — |
+| Flash | Ruffle | 新构建；按面板分辨率全屏，d-pad/摇杆为虚拟鼠标、Y 为点击 |
 | 视觉小说 | KRKR2 / onsCripter | KRKR2 游戏放 `/roms/krkr2`；onsCripter 另有核心 |
 | Pico-8 | Fake08 | — |
 | N64 | mupen64plus | GLideN64 / Rice 插件，`n64.sh` 启动 |
 | 通用运行器 | retrorun | 支持 Flycast 2021 / Flycast 2022 核心 |
-| 视频 | Kodi | 支持 Rockchip MPP 硬件解码 |
+| 冒险游戏引擎 | ScummVM 2026.4.0 | 独立版；GIF/MPC 已编译，Vorbis 静态链接，shader/vkeybd 资源齐全 |
+| 横版引擎 | OpenBOR / OpenBOR LNS | 同一系统内切换：`openbor`（基线）/ `openborlns`（AveyondFly 新构建） |
+| 视频 | Kodi 21.3 | Rockchip MPP 硬件解码；已关闭启动时的插件启用弹窗 |
 
 #### libretro 核心
 
 | 核心 | 说明 |
 |---|---|
 | 3DS（Azahar） | Vulkan + 自编 `malisx2` ICD；`azahar.sh` 启动 |
-| armN64 | N64 备选核心 |
+| armN64 | v1.3，N64 备选核心（仅 64 位） |
 | parallel_n64 | 默认 GLES + Rice；另有 Vulkan 变体，手动启用 |
 | parallel_dc | Dreamcast |
-| armGBA | GBA / GB / GBC；同时提供 gambatte、mgba 等基线核心 |
+| armGBA | v1.8，GBA / GB / GBC；核心选项已中文化，支持 GPIO 与 EZ-Flash 卡带震动；另有 32 位版本 |
 | GPSP | 支持 EZODE 震动与 mGBA 金手指 |
 | pcsx_rearmed | 带金手指版本，效率最高 |
 | mame2015 / mame2016 / native32 | 街机 |
 | yabadabadoo | Saturn |
 | 其他基线核心 | 随镜像提供 |
+| SNES / NES / MD 系列 | snes9x2005、snes9x2010、snes9x2002、snes9x、bsnes、bsnes-jg、nestopia、fixNES、QuickNES、fceumm、Genesis-Plus-GX / Wide / Expanded、blastem、picodrive、smsplus-gx、Gearsystem 均基于上游最新代码重编，64 位 + 32 位，核心选项已完整中文化 |
+| Mesen CE | 新增核心，支持 NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG / WonderSwan；核心选项已中文化，64 位 + 32 位 |
 
 ### EmulationStation 功能
 
@@ -92,7 +96,9 @@ dArkOS 3562 是面向 RK3562 掌机的 Debian 游戏系统：以 EmulationStatio
 - 性能设置：CPU / GPU / DMC 频率；可将 loader 写入 eMMC 解锁 DMC 1056
 - ZRAM 管理：多种算法与大小，推荐 LZ4
 - 模拟器切换在对应系统的 **SELECT** 菜单中完成；请先选择模拟器再选核心，
-  否则核心列表为空
+  否则核心列表为空。OpenBOR 在同一系统内切换 `openbor` / `openborlns`
+- armGBA 的震动可在核心选项里关闭（默认开启）；GBA 的 32 位核心与 64 位核心分别放在
+  RetroArch / RetroArch32 的核心目录
 - 351Files：支持多种局域网无线传输协议、百度云上传/下载、双列显示与 root 进入
 
 ### 系统特性
@@ -156,7 +162,7 @@ ROM 都在 SD 卡的 exFAT 分区（挂载点 `/roms`），按系统分目录：
 | 平台 | 需要的文件 | 放置位置 |
 |---|---|---|
 | PS1（DuckStation / PCSX ReARMed） | `SCPH1001.BIN`（美版）、`SCPH5500`（日版）、`SCPH5501`（美版）、`SCPH5502`（欧版） | `/roms/bios/` |
-| PS2（ARMSX2） | 任意有效 PS2 BIOS dump，如 `scph39001.bin`、`SCPH-70012_BIOS_V12_USA_200.bin` | `/roms/ps2/bios/` |
+| PS2（ARMSX2） | 任意有效 PS2 BIOS dump，如 `scph39001.bin`、`SCPH-70012_BIOS_V12_USA_200.bin` | `/roms/bios/` |
 | NDS（DSperate） | `nds_bios9.bin`、`nds_bios7.bin`、`nds_firmware.bin` | `/roms/bios/` |
 | Saturn（YabaSanshiro） | `sega_101.bin`（日版）、`mpr-17933.bin`（美/欧版） | `/roms/bios/` |
 | Dreamcast（Flycast） | `dc_boot.bin`、`dc_flash.bin`（可选） | `/roms/bios/` |
@@ -168,7 +174,8 @@ ROM 都在 SD 卡的 exFAT 分区（挂载点 `/roms`），按系统分目录：
 
 注意：
 
-- `SCPH1001.BIN` 是 PS1 BIOS，**PS2 不能使用**
+- `SCPH1001.BIN` 是 PS1 BIOS，**PS2 不能使用**；但可以和 PS2 BIOS 放在同一目录，
+  ARMSX2 会按大小（4–8MB）和内容校验自动挑出 PS2 BIOS，跳过 PS1
 - PS2 没有 BIOS 时 ARMSX2 只能进主界面，无法启动游戏
 - BIOS 文件名通常不强制，但大小/内容必须是正确 dump（模拟器按内容识别）
 
@@ -267,36 +274,40 @@ Controls:
 
 | Platform | Implementation | Notes |
 |---|---|---|
-| PS2 | ARMSX2 | Vulkan + `malisx2`; BIOS in `/roms/ps2/bios`; launched by `ps2.sh` |
+| PS2 | ARMSX2 | Vulkan + `malisx2 0.5.1`; BIOS in `/roms/bios`; launched by `ps2.sh` |
 | GameCube / Wii | Dolphin NoGUI | Vulkan by default, `VK_KHR_display` direct to KMS; `dolphin.sh` |
 | PS1 | DuckStation official mini AppImage | per-model hotkeys; settings/saves on the ROM partition; BIOS in `/roms/bios` |
-| PSP | PPSSPP / PPSSPP 2021 | two builds, multiple backends |
+| PSP | PPSSPP / PPSSPP 2021 | two builds; the 2021 build now has Vulkan (`VK_KHR_display`) plus its GLES backend |
 | NDS | DSperate / DraStic | DSperate uses system Vulkan with a Chinese UI; NDS BIOS required |
 | Saturn | YabaSanshiro | four builds; BIOS required |
 | Dreamcast | Flycast 2.7 / Flycast 2022 | both support Vulkan |
 | PS Vita | Vita3K-Plus | dedicated Wayland session; runtime files under `/opt/vita3k` |
 | J2ME | FreeJ2ME | standalone build with bundled CJK font and pad mapping |
-| Flash | Ruffle | — |
+| Flash | Ruffle | new build; fullscreen at panel resolution, d-pad/stick drive a virtual mouse and Y clicks |
 | Visual novels | KRKR2 / onsCripter | KRKR2 games in `/roms/krkr2`; onsCripter also ships a core |
 | Pico-8 | Fake08 | — |
 | N64 | mupen64plus | GLideN64 / Rice plugins; launched by `n64.sh` |
 | Runner | retrorun | supports the Flycast 2021 and Flycast 2022 cores |
-| Video | Kodi | Rockchip MPP hardware decoding |
+| Adventure engine | ScummVM 2026.4.0 | standalone; GIF/MPC compiled in, Vorbis statically linked, shader/vkeybd assets bundled |
+| Beat-em-up engine | OpenBOR / OpenBOR LNS | one system, switch engines: `openbor` (baseline) / `openborlns` (AveyondFly build) |
+| Video | Kodi 21.3 | Rockchip MPP hardware decoding; startup add-on prompts disabled |
 
 #### libretro cores
 
 | Core | Notes |
 |---|---|
 | 3DS (Azahar) | Vulkan + self-built `malisx2` ICD; launched by `azahar.sh` |
-| armN64 | alternative N64 core |
+| armN64 | v1.3, alternative N64 core (64-bit only) |
 | parallel_n64 | defaults to GLES + Rice; a Vulkan variant is available for manual use |
 | parallel_dc | Dreamcast |
-| armGBA | GBA / GB / GBC; gambatte and mgba baseline cores are also included |
+| armGBA | v1.8, GBA / GB / GBC; Chinese core options, GPIO and EZ-Flash cartridge rumble; a 32-bit build is also provided |
 | GPSP | EZODE rumble and mGBA cheat support |
 | pcsx_rearmed | cheat-enabled build, the most efficient PS1 option |
 | mame2015 / mame2016 / native32 | arcade |
 | yabadabadoo | Saturn |
 | Other baseline cores | shipped with the image |
+| SNES / NES / MD family | snes9x2005, snes9x2010, snes9x2002, snes9x, bsnes, bsnes-jg, nestopia, fixNES, QuickNES, fceumm, Genesis-Plus-GX / Wide / Expanded, blastem, picodrive, smsplus-gx and Gearsystem rebuilt from the latest upstream code, 64-bit and 32-bit, with fully localized (Chinese) core options |
+| Mesen CE | New core covering NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG / WonderSwan; localized core options; 64-bit and 32-bit |
 
 ### EmulationStation features
 
@@ -312,7 +323,10 @@ Controls:
   unlock DMC 1056.
 - ZRAM management with multiple algorithms and sizes; LZ4 is recommended.
 - Emulator switching lives in each system's **SELECT** menu; choose the emulator
-  before the core, otherwise the core list is empty.
+  before the core, otherwise the core list is empty. OpenBOR switches between
+  `openbor` / `openborlns` inside the same system.
+- armGBA rumble can be turned off in its core options (on by default); its 32-bit
+  and 64-bit cores live in the RetroArch and RetroArch32 core directories.
 - 351Files: multiple LAN/wireless transfer protocols, Baidu Cloud upload/download,
   dual-pane view and root access.
 
@@ -382,7 +396,7 @@ and ARMSX2's `[Folders] Bios` all point here):
 | Platform | Required files | Location |
 |---|---|---|
 | PS1 (DuckStation / PCSX ReARMed) | `SCPH1001.BIN` (US), `SCPH5500` (JP), `SCPH5501` (US), `SCPH5502` (EU) | `/roms/bios/` |
-| PS2 (ARMSX2) | any valid PS2 BIOS dump, e.g. `scph39001.bin`, `SCPH-70012_BIOS_V12_USA_200.bin` | `/roms/ps2/bios/` |
+| PS2 (ARMSX2) | any valid PS2 BIOS dump, e.g. `scph39001.bin`, `SCPH-70012_BIOS_V12_USA_200.bin` | `/roms/bios/` |
 | NDS (DSperate) | `nds_bios9.bin`, `nds_bios7.bin`, `nds_firmware.bin` | `/roms/bios/` |
 | Saturn (YabaSanshiro) | `sega_101.bin` (JP), `mpr-17933.bin` (US/EU) | `/roms/bios/` |
 | Dreamcast (Flycast) | `dc_boot.bin`, `dc_flash.bin` (optional) | `/roms/bios/` |
@@ -394,7 +408,8 @@ and ARMSX2's `[Folders] Bios` all point here):
 
 Notes:
 
-- `SCPH1001.BIN` is a PS1 BIOS and **cannot be used for PS2**.
+- `SCPH1001.BIN` is a PS1 BIOS and **cannot be used for PS2**; it may still sit in
+  the same folder, as ARMSX2 picks the PS2 dump by size (4–8 MB) and content.
 - Without a PS2 BIOS, ARMSX2 can only reach its main menu, not boot games.
 - BIOS file names are usually not enforced, but the size and content must be a
   correct dump (emulators identify files by content).

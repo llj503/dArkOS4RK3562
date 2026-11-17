@@ -1,15 +1,54 @@
 #!/bin/bash
 # ============================================================
-# brightness-watch — 背光变化即持久化 (ES 只写 sysfs, 不保存)
-#   /sys/class/backlight/backlight/brightness 一变就写
-#   /home/ark/.config/brightness.level; hook.sh 每次开机读回。
-#   <20 的值视为屏保/息屏调暗, 不保存 (与 save-brightness 一致)。
+# brightness-watch — 显示状态持久化 (开机恢复 + 变化即保存)
+#
+# 开机时 (本服务由 systemd 启动) 先把保存的显示状态写回, 然后常驻监控:
+#   * 背光: ES 只写 sysfs 不保存, 这里一变就写
+#     /home/ark/.config/brightness.level。
+#     <20 的值视为屏保/息屏调暗, 不保存 (与 save-brightness 一致)。
+#   * 色温/gamma: /home/ark/.config/colortemp.conf 由 colortemp 保存, 这里
+#     写 rockchipdrm 的 colortemp 系列内核参数 (游戏/Kodi 同样生效)。
+#     参数在每次开机时回到默认值, 所以必须在这里重放。
 # ============================================================
 CFG="/home/ark/.config/brightness.level"
 SYS="/sys/class/backlight/backlight/brightness"
+CT_CONF="/home/ark/.config/colortemp.conf"
+CT_SYS="/sys/module/rockchipdrm/parameters/colortemp"
+
+apply_saved_brightness() {
+  local bl
+  [ -f "$CFG" ] || return 0
+  bl=$(cat "$CFG" 2>/dev/null || true)
+  if [[ "$bl" =~ ^[0-9]+$ ]] && [ "$bl" -le 255 ]; then
+    echo "$bl" > "$SYS" 2>/dev/null && echo "[brightness-watch] brightness restored: $bl"
+  fi
+}
+
+apply_saved_colortemp() {
+  local ct gr gg gb ch val pm
+  [ -w "$CT_SYS" ] && [ -f "$CT_CONF" ] || return 0
+  ct=$(awk '$1=="kelvin" { print $2; exit }' "$CT_CONF" 2>/dev/null)
+  if [[ "$ct" =~ ^[0-9]+$ ]] && [ "$ct" -le 9000 ]; then
+    echo "$ct" > "$CT_SYS" 2>/dev/null \
+      && echo "[brightness-watch] color temperature restored: ${ct}K"
+  fi
+  read -r _ gr gg gb < <(awk '$1=="gamma" { print $2, $3, $4; exit }' "$CT_CONF" 2>/dev/null) || true
+  for ch in r g b; do
+    eval "val=\$$ch"
+    [[ "$val" =~ ^[0-9]*\.?[0-9]+$ ]] || continue
+    pm=$(awk -v v="$val" 'BEGIN { printf "%d", v * 1000 + 0.5 }')
+    if [ "$pm" -ge 100 ] && [ "$pm" -le 2000 ]; then
+      echo "$pm" > "${CT_SYS}_$ch" 2>/dev/null || true
+    fi
+  done
+  echo "[brightness-watch] color gamma restored: ${gr:-1} ${gg:-1} ${gb:-1}"
+}
 
 [ -w "$SYS" ] || SYS=$(ls -d /sys/class/backlight/*/brightness 2>/dev/null | head -n1)
 [ -n "$SYS" ] && [ -w "$SYS" ] || exit 0
+
+apply_saved_brightness
+apply_saved_colortemp
 
 mkdir -p "$(dirname "$CFG")"
 last=$(cat "$CFG" 2>/dev/null || true)

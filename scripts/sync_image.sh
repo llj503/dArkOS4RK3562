@@ -62,6 +62,10 @@ echo "== 源树检查: boot $(find "$D/boot" -type f | wc -l) 文件, rootfs $(f
 echo "== 刷写开源 uboot (原厂 uboot 无法引导我们的内核)"
 sudo "$D/uboot/flash_uboot.sh" "$IMG"
 
+# 构建期定尺 (对齐 arkos4clone repart_image.sh): boot(p3)->256M,
+# rootfs(p4)->11G; ROM(p5) 占位到镜像尾部, 设备首启只扩 p5, 不再动 rootfs。
+sudo "$D/scripts/repart_image.sh" "$IMG"
+
 sudo "$D/scripts/mount_arkos.sh" mount "$IMG" >/dev/null
 trap 'sudo "$D/scripts/mount_arkos.sh" unmount >/dev/null 2>&1' EXIT
 
@@ -236,6 +240,34 @@ sudo rm -f "$D/mnt/root/etc/systemd/system/fan-hotkey.service" \
 # wifi-driver-load.service 已被 hook.sh 的 load_wifi_modules 取代:
 # 源树不再带 override.conf, 这里直接 mask 掉镜像里的原厂单元, 防止它抢跑
 sudo ln -sfn /dev/null "$D/mnt/root/etc/systemd/system/wifi-driver-load.service"
+
+# roms.tar: 项目 roms/ (增量) + 原厂骨架 -> 镜像 /roms.tar, 首启由
+# expandtoexfat.sh 解包到扩容后的 ROM 分区 (对齐 arkos4clone 的 pack_roms_tar)。
+# 成员路径带 roms/ 前缀 (解包命令是 tar -x -C /)。
+# 原厂骨架不落回项目目录: 镜像里 /roms 已有内容就用它, 否则从原 /roms.tar 解出。
+pack_roms_tar() {
+  [[ -d "$D/roms" ]] || { echo "== 跳过 roms 打包 (源树无 roms/)"; return 0; }
+  echo "== 打包 roms/ -> 镜像 /roms.tar"
+  local stage
+  stage="$(mktemp -d -t roms_stage.XXXXXX)"
+  mkdir -p "$stage/roms"
+  if [ -d "$D/mnt/root/roms" ] && [ -n "$(sudo ls -A "$D/mnt/root/roms" 2>/dev/null)" ]; then
+    echo "   合并镜像 /roms 骨架"
+    sudo rsync -a --exclude 'System Volume Information' --exclude 'EUMONBMP.SYS' \
+      --exclude '*.CBM' "$D/mnt/root/roms/" "$stage/roms"/
+  elif [ -f "$D/mnt/root/roms.tar" ]; then
+    echo "   合并原厂 roms.tar 骨架"
+    sudo tar -xf "$D/mnt/root/roms.tar" -C "$stage"
+  fi
+  # --checksum: 同尺寸同 mtime 也必须用项目版本覆盖原厂
+  sudo rsync -a --checksum "$D/roms/" "$stage/roms"/
+  # exFAT 不支持符号链接/属主: -h 解引用, 属主归一 root
+  sudo tar -h --hard-dereference --owner=0 --group=0 -cf "$D/mnt/root/roms.tar" -C "$stage" roms
+  sudo chmod 777 "$D/mnt/root/roms.tar"
+  sudo rm -rf "$stage"
+  echo "✓ roms.tar: $(sudo tar -tf "$D/mnt/root/roms.tar" | wc -l) 成员"
+}
+pack_roms_tar
 
 # 模块目录是完整集 (原厂 kernel/ + 我们的 extra/), rsync 后重建依赖索引,
 # extra/ 优先级高于 kernel/, 我们重编的 rk915/aic USB 栈覆盖原厂同名模块

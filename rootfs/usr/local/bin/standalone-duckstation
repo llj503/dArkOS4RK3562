@@ -74,6 +74,26 @@ run_duckstation() {
   # 官方 mini AppImage: SDL3 + Vulkan KHR display
   sed -i --follow-symlinks 's/^Renderer = .*/Renderer = Vulkan/' "$DS_SETTINGS"
 
+  # 暂停菜单/即时存档/快进热键 = 机型热键 + X/L2/R2/L1.
+  # DuckStation 退出时会把自己的 settings.ini 写回默认热键, 所以在每次启动前
+  # 按当前机型重写 (console_detect 的 HOTKEY_TYPE: mode=Guide, select=Back,
+  # 其余=Misc1).
+  local _hktype=happy5 _hk
+  [ -x /usr/local/bin/console_detect ] && eval "$(/usr/local/bin/console_detect -s 2>/dev/null)" || true
+  _hktype="${HOTKEY_TYPE:-happy5}"
+  case "$_hktype" in
+    select) _hk="SDL-0/Back"  ;;
+    mode)   _hk="SDL-0/Guide" ;;
+    *)      _hk="SDL-0/Misc1" ;;
+  esac
+  sed -i --follow-symlinks -E '/^(OpenPauseMenu|LoadSelectedSaveState|SaveSelectedSaveState|FastForward) =/d' "$DS_SETTINGS" 2>/dev/null || true
+  if grep -q '^\[Hotkeys\]' "$DS_SETTINGS"; then
+    awk -v hk="$_hk" '{ print } /^\[Hotkeys\]/{ printf "OpenPauseMenu = %s & SDL-0/X\nLoadSelectedSaveState = %s & SDL-0/LeftTrigger\nSaveSelectedSaveState = %s & SDL-0/RightTrigger\nFastForward = %s & SDL-0/LeftShoulder\n", hk, hk, hk, hk }' "$DS_SETTINGS" > "$DS_SETTINGS.tmp" \
+      && mv "$DS_SETTINGS.tmp" "$DS_SETTINGS"
+  else
+    printf '\n[Hotkeys]\nOpenPauseMenu = %s & SDL-0/X\nLoadSelectedSaveState = %s & SDL-0/LeftTrigger\nSaveSelectedSaveState = %s & SDL-0/RightTrigger\nFastForward = %s & SDL-0/LeftShoulder\n' "$_hk" "$_hk" "$_hk" "$_hk" >> "$DS_SETTINGS"
+  fi
+
   # 跟随 ES 语言: DuckStation 的 UI 语言由 [Main] Language 控制
   local lang=zh-CN
   if [ ! -f /home/ark/.config/.cn ] && ! grep -q 'name="Language" value="zh-CN"' /home/ark/.emulationstation/es_settings.cfg 2>/dev/null; then

@@ -24,10 +24,9 @@ fi
 
 # BIOS 目录: 共享 /roms/bios 里通常只有 PS1 BIOS (512K, ARMSX2 会报
 # BIOSNotUsable), PS2 BIOS 在各机型的 /roms/ps2/bios (4M)。优先用后者。
+# BIOS 统一放 /roms/bios。ARMSX2 自己按大小(4–8MB)和 ROMVER 识别 PS2 BIOS，
+# 同目录下的 PS1 BIOS(512K) 会被跳过，不会误选。
 BIOS_DIR=/roms/bios
-for f in /roms/ps2/bios/*.BIN /roms/ps2/bios/*.bin; do
-  [ -f "$f" ] && [ "$(stat -c %s "$f" 2>/dev/null)" = 4194304 ] && BIOS_DIR=/roms/ps2/bios && break
-done
 sed -i "s|^Bios = .*|Bios = $BIOS_DIR|" "$DATA/.config/ARMSX2/inis/PCSX2.ini"
 
 # ARMSX2 异常退出时会把 ini 写回默认 (Renderer=-1 会直接黑屏退出, Bios 会变回

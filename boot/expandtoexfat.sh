@@ -106,31 +106,11 @@ dialog --infobox "EASYROMS partition expansion and conversion to exfat in proces
 sleep 5
 
 (
-    maxSize=$(lsblk -b --output SIZE -n -d /dev/${primary_block})
-
-    newExtSizePct=$(printf %.2f "$((10**4 * 11000000000/$maxSize))e-4")
-    newExtSizePct=$(echo print 1-$newExtSizePct | perl)
-    ExfatPctToRemain=$(echo print 100*$newExtSizePct | perl)
-
-    # Expand the rootfs partition if possible to make room for future update needs
-    partition_type=$(df -T | grep mmcblk[0-1]p4 | cut -d ' ' -f 2)
-    if [ $ExfatPctToRemain -lt "100" ]; then
-      printf "d\n5\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
-      sudo growpart --free-percent=$ExfatPctToRemain -v /dev/${primary_block} 4 &> /dev/null
-      if [[ "$partition_type" == *"ext"* ]]; then
-        sudo resize2fs /dev/${primary_block}p4 &> /dev/null
-      elif [[ "$partition_type" == *"xfs"* ]]; then
-        sudo xfs_growfs /dev/${primary_block}p4 &> /dev/null
-      elif [[ "$partition_type" == *"btrfs"* ]]; then
-        sudo btrfs filesystem resize max / &> /dev/null
-      else
-        echo "Don't know how to grow a $partition_type file system."
-        echo ""
-      fi
-      echo 30
-      printf "n\n5\n\n\nt\n5\n11\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
-      echo 45
-    fi
+    # rootfs (p4) 已在构建期定尺为 11G (scripts/repart_image.sh),
+    # 首启只重建 ROM 分区 p5: 从 p4 尾部到整卡末尾, 全部给 ROM.
+    printf "d\n5\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
+    printf "n\n5\n\nt\n5\n11\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
+    echo 45
 
     sudo mkfs.exfat -c 16K -L EASYROMS /dev/hda3 &> /dev/null
     exitcode=$?
@@ -144,7 +124,7 @@ sleep 5
     sleep 2
     sudo mount -t exfat -w /dev/${primary_block}p5 /roms &> /dev/null
     sleep 2
-    (pv -n /roms.tar | tar --no-same-permissions --no-same-owner -xf - -C /) &> /tmp/tar_stat.txt &
+    (pv -n /roms.tar | tar --no-same-permissions --no-same-owner -xmf - -C /) &> /tmp/tar_stat.txt &
     let COUNT=1
     while true; do
       VAL=$(tail -n 1 /tmp/tar_stat.txt)
@@ -172,7 +152,7 @@ sleep 5
       sudo rm -rf /tempthemes/es-theme-epic-cody*/ &> /dev/null
     fi
     cd /tempthemes
-    (tar --no-same-permissions --no-same-owner -cf - . | pv -n -s $(du -sb /tempthemes/ | awk '{print $1}') | tar --no-same-permissions --no-same-owner -xf - -C /roms/themes/) &> /tmp/tar_stat.txt &
+    (tar --no-same-permissions --no-same-owner -cf - . | pv -n -s $(du -sb /tempthemes/ | awk '{print $1}') | tar --no-same-permissions --no-same-owner -xmf - -C /roms/themes/) &> /tmp/tar_stat.txt &
     let COUNT=1
     while true; do
       VAL=$(tail -n 1 /tmp/tar_stat.txt)

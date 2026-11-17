@@ -81,12 +81,13 @@ jobs:
           sudo apt-get install -y \
             parted rsync xz-utils wget unzip p7zip-full \
             btrfs-progs exfatprogs e2fsprogs dosfstools \
-            util-linux kmod fdisk device-tree-compiler
+            util-linux kmod fdisk gdisk device-tree-compiler
 
       - name: 检查源树关键文件
         run: |
           for f in boot/Image uboot/rk3562-uboot-16m.bin scripts/sync_image.sh \
-                   scripts/mount_arkos.sh uboot/flash_uboot.sh rootfs/etc/emulationstation/es_systems.cfg; do
+                   scripts/mount_arkos.sh scripts/repart_image.sh uboot/flash_uboot.sh \
+                   rootfs/etc/emulationstation/es_systems.cfg; do
             [[ -f "$f" ]] || { echo "::error::缺少 $f"; exit 1; }
           done
           echo "boot/Image: $(du -h boot/Image | cut -f1)"
