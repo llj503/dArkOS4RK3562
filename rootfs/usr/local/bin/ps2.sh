@@ -52,10 +52,10 @@ case "${HOTKEY_TYPE:-happy5}" in
 esac
 sed -i -E '/^OpenPauseMenu[[:space:]]*=/d' "$INI" 2>/dev/null || true
 if grep -q '^\[Hotkeys\]' "$INI" 2>/dev/null; then
-  awk -v l="OpenPauseMenu = $HK & SDL-0/FaceWest" '{ print } /^\[Hotkeys\]/{ print l }' "$INI" > "$INI.tmp" \
+  awk -v l="OpenPauseMenu = $HK & SDL-0/FaceNorth" '{ print } /^\[Hotkeys\]/{ print l }' "$INI" > "$INI.tmp" \
     && mv "$INI.tmp" "$INI"
 else
-  printf '\n[Hotkeys]\nOpenPauseMenu = %s & SDL-0/FaceWest\n' "$HK" >> "$INI"
+  printf '\n[Hotkeys]\nOpenPauseMenu = %s & SDL-0/FaceNorth\n' "$HK" >> "$INI"
 fi
 
 # ARMSX2 解析极简单轨 .cue 会失败 (DoCDVDopen), 但直接读同一 .bin 正常;

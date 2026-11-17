@@ -392,7 +392,7 @@ apply_tools_gamelist() {
   msg "Tools gamelist: $lang"
 }
 
-# ARMSX2 (PS2): 暂停菜单 = 机型热键 + X。首启/换机型时按 console_detect 的
+# ARMSX2 (PS2): 暂停菜单 = 机型热键 + Y。首启/换机型时按 console_detect 的
 # HOTKEY_TYPE 写入 ini; ps2.sh 每次启动还会再写一遍 (ARMSX2 退出会把 ini 恢复成
 # 默认 Keyboard/Escape)。
 apply_armsx2_hotkeys() {
@@ -403,7 +403,7 @@ apply_armsx2_hotkeys() {
     happy5) hk="SDL-0/Misc1" ;;
     *)      return 0 ;;
   esac
-  line="OpenPauseMenu = $hk & SDL-0/FaceWest"
+  line="OpenPauseMenu = $hk & SDL-0/FaceNorth"
   for f in /roms/ps2/armsx2/.config/ARMSX2/inis/PCSX2.ini \
            /roms2/ps2/armsx2/.config/ARMSX2/inis/PCSX2.ini; do
     [ -f "$f" ] || continue
@@ -415,7 +415,7 @@ apply_armsx2_hotkeys() {
     fi
     chown 1000:1000 "$f" 2>/dev/null || true
   done
-  msg "ARMSX2 hotkey: $hk + X"
+  msg "ARMSX2 hotkey: $hk + Y"
 }
 
 apply_all_quirks() {

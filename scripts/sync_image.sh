@@ -245,6 +245,9 @@ sudo rm -f "$D/mnt/root/etc/systemd/system/fan-hotkey.service" \
 # 源树不再带 override.conf, 这里直接 mask 掉镜像里的原厂单元, 防止它抢跑
 sudo ln -sfn /dev/null "$D/mnt/root/etc/systemd/system/wifi-driver-load.service"
 
+# batteryplus 默认关闭 (旧工作副本可能残留 enable 链接; 用户可在 ES 里自行开启)
+sudo rm -f "$D/mnt/root/etc/systemd/system/multi-user.target.wants/batteryplus.service"
+
 # roms.tar: 项目 roms/ (增量) + 原厂骨架 -> 镜像 /roms.tar, 首启由
 # expandtoexfat.sh 解包到扩容后的 ROM 分区 (对齐 arkos4clone 的 pack_roms_tar)。
 # 成员路径带 roms/ 前缀 (解包命令是 tar -x -C /)。

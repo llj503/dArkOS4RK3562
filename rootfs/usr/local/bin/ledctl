@@ -146,7 +146,16 @@ init_byte() {
 	echo $((0x20 + LEDCOUNT / 4 - 1))
 }
 
-pwr() { [ -w "$LED_PWR" ] && printf '%s' "$1" > "$LED_PWR" 2>/dev/null; }
+# vcc-led 是 debugfs 直接调 regulator_disable: 对未使能/已自动断电的 regulator
+# 再写 0 会触发内核 "unbalanced disables for vcc-led" 告警并返回 -EIO。
+# 写之前先读当前值, 相同就跳过 (幂等), 同时避免重复 enable。
+pwr() {
+	[ -w "$LED_PWR" ] || return 0
+	local cur
+	cur=$(cat "$LED_PWR" 2>/dev/null)
+	[ "$cur" = "$1" ] && return 0
+	printf '%s' "$1" > "$LED_PWR" 2>/dev/null
+}
 
 # Open the controller UART once on fd 9, write-only, CLOCAL, raw.
 open_uart() {
