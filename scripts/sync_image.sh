@@ -118,6 +118,7 @@ for pat in libXfont2 libfontenc libfreerdp libwinpr3 libneatvnc liburiparser \
            libaml libcdda; do
   sudo rm -f "$R/usr/lib/aarch64-linux-gnu/$pat"*
 done
+
 # PSV 辅助程序随 bundle 走 /opt/vita3k/bin
 sudo rm -f "$R/usr/local/bin/psvita-lang.py" "$R/usr/local/bin/psvita-option.py" \
            "$R/usr/local/bin/vita3k-pad.py" "$R/usr/local/bin/vita3k-frontend" \
