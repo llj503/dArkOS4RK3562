@@ -16,10 +16,17 @@ APP=/opt/armsx2-sdl/armsx2-sdl
 
 mkdir -p "$DATA"/{inis,memcards,sstates,snaps,cache,textures,cheats,patches,resources,logs,inputprofiles,debuggerlayouts,debuggersettings} "$DATA/.config/ARMSX2/inis"
 
-# 首启: 默认 ini (BIOS=/roms/bios, Vulkan, 全套路径指向 roms 分区).
+# 默认 ini (完整配置: 含 [UI] SettingsVersion, BIOS=/roms/bios, Renderer=14).
 # ARMSX2 的 DataRoot 是 .config/ARMSX2 (不是 PCSX2), ini 必须放这里.
-if [ ! -f "$DATA/.config/ARMSX2/inis/PCSX2.ini" ]; then
-  cp /opt/armsx2-sdl/PCSX2.ini.template "$DATA/.config/ARMSX2/inis/PCSX2.ini"
+INI="$DATA/.config/ARMSX2/inis/PCSX2.ini"
+# 首次启动, 或被写成不完整/无效配置 (缺 SettingsVersion, Renderer=-1,
+# Bios 指向 DataRoot) 时, 用模板整份重建; 否则只修正关键项 (保留用户设置).
+# Renderer=-1 会让 ARMSX2 在 GS 初始化前直接退出, 表现为"闪退".
+if [ ! -f "$INI" ] \
+   || ! grep -q '^SettingsVersion' "$INI" 2>/dev/null \
+   || grep -qE '^Renderer[[:space:]]*=[[:space:]]*-1' "$INI" 2>/dev/null \
+   || ! grep -qE '^Bios[[:space:]]*=[[:space:]]*/roms/bios' "$INI" 2>/dev/null; then
+  cp -f /opt/armsx2-sdl/PCSX2.ini.template "$INI"
 fi
 
 # BIOS 目录: 共享 /roms/bios 里通常只有 PS1 BIOS (512K, ARMSX2 会报
@@ -27,11 +34,11 @@ fi
 # BIOS 统一放 /roms/bios。ARMSX2 自己按大小(4–8MB)和 ROMVER 识别 PS2 BIOS，
 # 同目录下的 PS1 BIOS(512K) 会被跳过，不会误选。
 BIOS_DIR=/roms/bios
-sed -i "s|^Bios = .*|Bios = $BIOS_DIR|" "$DATA/.config/ARMSX2/inis/PCSX2.ini"
+sed -i "s|^Bios = .*|Bios = $BIOS_DIR|" "$INI"
 
 # ARMSX2 异常退出时会把 ini 写回默认 (Renderer=-1 会直接黑屏退出, Bios 会变回
 # 相对路径 "bios"), 每次启动都强制修正这两个关键项
-sed -i -E 's|^Renderer = .*|Renderer = 14|' "$DATA/.config/ARMSX2/inis/PCSX2.ini"
+sed -i -E 's|^Renderer = .*|Renderer = 14|' "$INI"
 
 # 打开暂停菜单 = 机型热键 + X (与 hook.sh 同一套映射: mode=Guide, select=Back,
 # 其余=Misc1). ARMSX2 退出时会重写 ini 把 [Hotkeys] 还原成 Keyboard/Escape,
@@ -43,7 +50,6 @@ case "${HOTKEY_TYPE:-happy5}" in
   mode)   HK="SDL-0/Guide" ;;
   *)      HK="SDL-0/Misc1" ;;
 esac
-INI="$DATA/.config/ARMSX2/inis/PCSX2.ini"
 sed -i -E '/^OpenPauseMenu[[:space:]]*=/d' "$INI" 2>/dev/null || true
 if grep -q '^\[Hotkeys\]' "$INI" 2>/dev/null; then
   awk -v l="OpenPauseMenu = $HK & SDL-0/FaceWest" '{ print } /^\[Hotkeys\]/{ print l }' "$INI" > "$INI.tmp" \

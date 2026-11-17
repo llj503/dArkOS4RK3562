@@ -137,6 +137,10 @@ sudo chmod -R 777 "$D/mnt/boot" 2>/dev/null || true
 # 早期单独生成的 rk3562-charge*.dtb 不再需要, 从镜像里清掉
 sudo rm -f "$D/mnt/boot"/rk3562-charge*.dtb
 
+# 原厂关机充电用的 battery_*.bmp (battery_0..5 / battery_fail) 构建后不再需要,
+# 目前的关机充电与开机 logo 都不引用它们, 从镜像 boot 分区清掉
+sudo rm -f "$D/mnt/boot"/battery_*.bmp
+
 echo "== 同步 rootfs"
 # /etc 是系统配置: 属主 root, 权限按源树 (es_systems.cfg 644 等静态件 root:root);
 # es_input.cfg 是 ES 运行时可写文件, 原厂归 ark, 排除避免覆盖
@@ -261,6 +265,8 @@ pack_roms_tar() {
   fi
   # --checksum: 同尺寸同 mtime 也必须用项目版本覆盖原厂
   sudo rsync -a --checksum "$D/roms/" "$stage/roms"/
+  # BIOS 统一放 /roms/bios, 原厂骨架里的 ps2/bios 会误导用户, 不随包提供
+  sudo rm -rf "$stage/roms/ps2/bios"
   # exFAT 不支持符号链接/属主: -h 解引用, 属主归一 root
   sudo tar -h --hard-dereference --owner=0 --group=0 -cf "$D/mnt/root/roms.tar" -C "$stage" roms
   sudo chmod 777 "$D/mnt/root/roms.tar"
@@ -303,6 +309,8 @@ if [[ "$RELEASE" == "yes" || "$CI" == "yes" ]]; then
   # 工作副本可能被测试启动过: .console 已写、quirks 标记已落盘、p5 已 exfat、
   # hook 已提升。发布镜像必须让用户设备走完整首启 (hook 全量 quirks + SDL 复制)。
   sudo rm -f "$D/mnt/boot/.console" "$D/mnt/boot/.quirks_applied"
+  # 默认语言英文: 清掉中文标记 (存在时 hook 会把 ES/RA/PPSSPP 切成中文)
+  sudo rm -f "$D/mnt/boot/.cn"
   sudo cp "$D/boot/extlinux/conf.d/rg52mini.conf" "$D/mnt/boot/extlinux/extlinux.conf"
   sync
 fi

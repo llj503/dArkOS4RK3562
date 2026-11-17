@@ -392,6 +392,32 @@ apply_tools_gamelist() {
   msg "Tools gamelist: $lang"
 }
 
+# ARMSX2 (PS2): 暂停菜单 = 机型热键 + X。首启/换机型时按 console_detect 的
+# HOTKEY_TYPE 写入 ini; ps2.sh 每次启动还会再写一遍 (ARMSX2 退出会把 ini 恢复成
+# 默认 Keyboard/Escape)。
+apply_armsx2_hotkeys() {
+  local hk line f
+  case "${HOTKEY_TYPE:-}" in
+    select) hk="SDL-0/Back"  ;;
+    mode)   hk="SDL-0/Guide" ;;
+    happy5) hk="SDL-0/Misc1" ;;
+    *)      return 0 ;;
+  esac
+  line="OpenPauseMenu = $hk & SDL-0/FaceWest"
+  for f in /roms/ps2/armsx2/.config/ARMSX2/inis/PCSX2.ini \
+           /roms2/ps2/armsx2/.config/ARMSX2/inis/PCSX2.ini; do
+    [ -f "$f" ] || continue
+    sed -i -E '/^OpenPauseMenu[[:space:]]*=/d' "$f" 2>/dev/null || true
+    if grep -q '^\[Hotkeys\]' "$f" 2>/dev/null; then
+      awk -v l="$line" '{ print } /^\[Hotkeys\]/{ print l }' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    else
+      printf '\n[Hotkeys]\n%s\n' "$line" >> "$f"
+    fi
+    chown 1000:1000 "$f" 2>/dev/null || true
+  done
+  msg "ARMSX2 hotkey: $hk + X"
+}
+
 apply_all_quirks() {
   msg "Applying quirks for: $DEVICE_NAME"
   [[ -d "$QUIRKS_DIR" ]] || { warn "QUIRKS_DIR missing: $QUIRKS_DIR"; return 0; }
@@ -412,6 +438,7 @@ apply_all_quirks() {
   #   ogage 全局热键、RetroArch 摇杆/扳机轴号、私编中文 DuckStation 安装
   apply_ogage_hotkey
   apply_retroarch_axes
+  apply_armsx2_hotkeys
   apply_private_duckstation
 }
 
