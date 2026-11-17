@@ -6,123 +6,119 @@
 
 ## 中文
 
-### 项目简介
+### 项目说明
 
-dArkOS 3562 是面向 RK3562 掌机的 Debian 游戏系统：以 EmulationStation 为前端，
-集成 RetroArch 核心与多个独立模拟器，并提供掌机需要的按键映射、灯光、风扇、
-电源与性能管理。
+dArkOS 3562 是面向 RK3562 掌机的**差异层**（diff layer）仓库：可刷写镜像由基线镜像
+`dArkOS_rg52mini_trixie_06242026.img`（Debian trixie / aarch64、内核 5.10.226、
+Btrfs rootfs、exFAT ROM 分区）叠加本仓库的 `boot/` 与 `rootfs/` 得到。基线镜像只读、
+不进仓库；`scripts/sync_image.sh` 负责生成工作副本与发布镜像。
 
-系统以**差异层**（diff layer）方式维护：仓库不保存完整镜像，只保存相对基线镜像
-`dArkOS_rg52mini_trixie_06242026.img` 的改动。执行 `scripts/sync_image.sh`
-即可在本地把差异层叠加到工作镜像，生成完整可刷写镜像。
+本文只描述**相对基线的改动与新增**。
 
-- 一份镜像支持多台 RK3562 掌机，首次开机选择机型
-- 基线镜像只读、永不修改，也不进仓库（约 12GB）
-- 目标系统：Debian trixie (aarch64)、内核 5.10.226、Btrfs rootfs、exFAT ROM 分区
-- 大于 100MB 的核心以 `.so.xz` 保存，构建时自动解压
+### 致谢
 
-### 支持的设备
+本项目建立在上游工作之上，感谢：
 
-| 品牌 | 机型 | DTB | 分辨率 | 菜单键 |
-|---|---|---|---|---|
-| AISLPC | RG52 Mini | `rk3562-rg52mini.dtb` | 1280x720 竖屏 | Home |
-| AISLPC | RG43V Pro | `rk3562-rg43h.dtb` | 1024x768 | Select |
-| AISLPC | RG43H Pro | `rk3562-rg43h.dtb` | 1024x768 | Select |
-| AISLPC | Pocket AIS | `rk3562-ais.dtb` | 1024x768 | Home |
-| XiFan | NGP45HT | `rk3562-ngp45ht.dtb` | 1024x768 | M |
-| XiFan | XF55H | `rk3562-xf55h.dtb` | 1280x720 | M |
+- [christianhaitian/dArkOS](https://github.com/christianhaitian/dArkOS/)
+- [bmdhacks/dArkOS_rg52mini](https://github.com/bmdhacks/dArkOS_rg52mini)
 
-切换机型：首次开机用 **dtb 选择器**，PC 端可运行 `dtbtools/` 里的 dtbselector，
-或手动修改 `/boot/extlinux/extlinux.conf` 的 `FDT`。首次开机 `hook.sh` 会按机型
-应用 quirks（SDL 旋转库、按键映射等），并把 `/boot/hook.sh` 提升为
-`/boot/firstboot.sh` 供后续每次启动使用。
+### 启动与镜像布局
 
-操作约定：
+- AveyondFly RK3562 开源 U-Boot（16MB blob，含开机 logo、关机充电、显示支持）
+- 一镜像多机型：6 个 DTB（rg52mini / rg43h / rg43v / ais / ngp45ht / xf55h）+
+  分机型 extlinux 配置；`console_detect` 按 DTB/运行时设备树识别机型；PC 端可用
+  `dtbtools/` 的 dtbselector 选择（同时写 `/boot/.cn` 控制语言）
+- **构建期分区定尺**（`scripts/repart_image.sh`）：
+  boot 分区 256MiB、rootfs 11264MiB、ROM 分区占位到镜像尾部；出厂镜像首启只把 ROM
+  分区重建为 exFAT 并扩到整卡末尾，rootfs 不再变动
+- `/roms.tar` 由 `roms/` 增量 + 原厂骨架重新打包，首启解包（新增 3ds / krkr2 /
+  psvita / wii 及各系统占位目录）
+- `hook.sh` 分层：首启/换机型做全量 quirks（hostname、SDL 旋转库、ES/RA/PPSSPP
+  输入、语言与工具菜单、ogage 热键、摇杆轴号、私编 DuckStation）；每次开机只做会被
+  内核/设备重置的项（uinput 权限、WiFi 驱动、rk817 关机/音频、字体缓存、ldconfig）。
+  背光/色温由 `brightness-watch` 开机恢复并常驻保存；DuckStation / ARMSX2 热键由
+  各自启动器在启动时写入
 
-- 大部分设备用 **Hotkey + X（或 Y）** 打开快捷菜单，Hotkey 即上表的菜单键
-  （Select 也可作为 Hotkey）
-- 大部分模拟器退出键为 **Start + Select**；RetroArch 请先打开快捷菜单再退出
+### 内核
 
-### 模拟器与核心
+- 内核 5.10.226 重编（Linaro 6.3.1 交叉工具链）：
+  - `rk3562-joystick`：mV 死区、`axis_to_dpad`、`invert_abs*`、`swap_ab/swap_xy`、
+    `swap_start_home`、`linear_triggers`、`joypad_tuning` 运行时校准
+  - 电源灯（`led-3562`）、风扇 PWM、RK817 电量与关机修复
+  - Wi-Fi：AIC8800（SDIO/USB）、ZTop ZT9101（USB），按机型自动加载
+  - zram、Kodi 的 Rockchip MPP 硬解
+- DMC/内存频率不做内核覆盖：可用频点由 ATF/DDR 固件上报，内核按 DT 选择
 
-#### 独立模拟器
+### 独立模拟器（新增或更新）
 
 | 平台 | 实现 | 说明 |
 |---|---|---|
-| PS2 | ARMSX2 | Vulkan + `malisx2 0.5.1`；BIOS 放 `/roms/bios`；`ps2.sh` 启动 |
-| GameCube / Wii | Dolphin NoGUI | 默认 Vulkan，`VK_KHR_display` 直出 KMS；`dolphin.sh` |
-| PS1 | DuckStation 官方 mini AppImage | 每机型热键；设置/存档放 ROM 分区；BIOS 放 `/roms/bios` |
-| PSP | PPSSPP / PPSSPP 2021 | 两个版本可选；2021 版已启用 Vulkan（`VK_KHR_display`），同时保留 GLES 后端 |
-| NDS | DSperate / DraStic | DSperate 走系统 Vulkan + 中文界面；需要 NDS BIOS |
-| Saturn | YabaSanshiro | 共 4 个版本；需要 BIOS |
-| Dreamcast | Flycast 2.7 / Flycast 2022 | 两个版本均支持 Vulkan |
-| PS Vita | Vita3K-Plus | 独立 Wayland 会话；运行库集中在 `/opt/vita3k` |
-| J2ME | FreeJ2ME | 独立版，中文字体与手柄映射已内置 |
-| Flash | Ruffle | 新构建；按面板分辨率全屏，d-pad/摇杆为虚拟鼠标、Y 为点击 |
-| 视觉小说 | KRKR2 / onsCripter | KRKR2 游戏放 `/roms/krkr2`；onsCripter 另有核心 |
+| PS2 | ARMSX2 | Vulkan + `malisx2 0.5.1`；BIOS 统一放 `/roms/bios`，按大小/内容自动识别 |
+| GameCube / Wii | Dolphin NoGUI | Vulkan `VK_KHR_display` 直出 |
+| PS1 | DuckStation 官方 mini AppImage | 每机型热键；设置/存档放 ROM 分区 |
+| PSP | PPSSPP / PPSSPP 2021 | 2021 版启用 Vulkan（同时保留 GLES） |
+| NDS | DSperate / DraStic | DSperate 走系统 Vulkan + 中文界面 |
+| Saturn | YabaSanshiro | 4 个版本 |
+| Dreamcast | Flycast 2.7 / Flycast 2022 | 均支持 Vulkan |
+| PS Vita | Vita3K-Plus | 独立 Wayland 会话，运行库集中在 `/opt/vita3k` |
+| J2ME | FreeJ2ME | 内置中文字体与手柄映射 |
+| Flash | Ruffle | 新构建；按面板分辨率全屏，d-pad/摇杆为虚拟鼠标 |
+| 视觉小说 | KRKR2 / onsCripter | KRKR2 游戏放 `/roms/krkr2` |
 | Pico-8 | Fake08 | — |
-| N64 | mupen64plus | GLideN64 / Rice 插件，`n64.sh` 启动 |
-| 通用运行器 | retrorun | 支持 Flycast 2021 / Flycast 2022 核心 |
-| 冒险游戏引擎 | ScummVM 2026.4.0 | 独立版；GIF/MPC 已编译，Vorbis 静态链接，shader/vkeybd 资源齐全 |
-| 横版引擎 | OpenBOR / OpenBOR LNS | 同一系统内切换：`openbor`（基线）/ `openborlns`（AveyondFly 新构建） |
-| 视频 | Kodi 21.3 | Rockchip MPP 硬件解码；已关闭启动时的插件启用弹窗 |
+| N64 | mupen64plus | GLideN64 / Rice 插件 |
+| 冒险游戏 | ScummVM 2026.4.0 | 独立版，GIF/MPC、Vorbis、shader/vkeybd 齐全 |
+| 横版引擎 | OpenBOR / OpenBOR LNS | 同一系统内切换 `openbor` / `openborlns` |
+| 视频 | Kodi 21.3 | Rockchip MPP 硬解；关闭启动插件启用弹窗 |
 
-#### libretro 核心
+### libretro 核心（新增或更新）
 
-| 核心 | 说明 |
-|---|---|
-| 3DS（Azahar） | Vulkan + 自编 `malisx2` ICD；`azahar.sh` 启动 |
-| armN64 | v1.3，N64 备选核心（仅 64 位） |
-| parallel_n64 | 默认 GLES + Rice；另有 Vulkan 变体，手动启用 |
-| parallel_dc | Dreamcast |
-| armGBA | v1.8，GBA / GB / GBC；核心选项已中文化，支持 GPIO 与 EZ-Flash 卡带震动；另有 32 位版本 |
-| GPSP | 支持 EZODE 震动与 mGBA 金手指 |
-| pcsx_rearmed | 带金手指版本，效率最高 |
-| mame2015 / mame2016 / native32 | 街机 |
-| yabadabadoo | Saturn |
-| 其他基线核心 | 随镜像提供 |
-| SNES / NES / MD 系列 | snes9x2005、snes9x2010、snes9x2002、snes9x、bsnes、bsnes-jg、nestopia、fixNES、QuickNES、fceumm、Genesis-Plus-GX / Wide / Expanded、blastem、picodrive、smsplus-gx、Gearsystem 均基于上游最新代码重编，64 位 + 32 位，核心选项已完整中文化 |
-| Mesen CE | 新增核心，支持 NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG / WonderSwan；核心选项已中文化，64 位 + 32 位 |
+- **2026-11 批量更新**：snes9x2005、snes9x2010、snes9x2002、snes9x、bsnes、
+  bsnes-jg、nestopia、fixNES、QuickNES、fceumm、Genesis-Plus-GX / Wide / Expanded、
+  blastem、picodrive、smsplus-gx、Gearsystem —— 全部回到上游最新代码重编，64 位 +
+  32 位，核心选项中文全部自行补全
+- **Mesen CE**：新增核心，支持 NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG /
+  WonderSwan，核心选项中文，64 位 + 32 位
+- armGBA v1.8：中文核心选项、GPIO 与 EZ-Flash 卡带震动，64 位 + 32 位
+- armN64 v1.3（仅 64 位）；parallel_n64（GLES + Rice，另有 Vulkan 变体）
+- PCE 家族（mednafen_pce_fast / pce / supergrafx）：中文选项、32 位版本、
+  按 ROM 同名 `.BIOS` / `.bios` 自动加载
+- 其它：Azahar（3DS，自编 malisx2 ICD）、ppsspp2021（Vulkan）、pcsx_rearmed（金手指）、
+  GPSP（EZODE 震动）、mame2015/2016、native32、yabadabadoo、parallel_dc
+- 32 位修复：picodrive 关闭可执行栈（`-Wl,-z,noexecstack`）；QuickNES 使用
+  `NO_UNALIGNED_ACCESS` 避免 ARM 未对齐 `STRD` 崩溃
 
-### EmulationStation 功能
+### EmulationStation
 
-- 3562 入口，模拟器与核心按系统分组
-- Wi-Fi 界面入口与 SSH 服务管理
-- 显示设置：亮度、伽马、色温
-- 摇杆设置：死区、用户态漂移校准、XBOX/NS 布局切换、关闭线性扳机上报
-- 摇杆灯与电源灯管理
-- batteryplus 服务开关
-- 风扇控制（仅带风扇的机型）；任意界面可用 Hotkey + Start 开关风扇
-- 性能设置：CPU / GPU / DMC 频率；可将 loader 写入 eMMC 解锁 DMC 1056
-- ZRAM 管理：多种算法与大小，推荐 LZ4
-- 模拟器切换在对应系统的 **SELECT** 菜单中完成；请先选择模拟器再选核心，
-  否则核心列表为空。OpenBOR 在同一系统内切换 `openbor` / `openborlns`
-- armGBA 的震动可在核心选项里关闭（默认开启）；GBA 的 32 位核心与 64 位核心分别放在
-  RetroArch / RetroArch32 的核心目录
-- 351Files：支持多种局域网无线传输协议、百度云上传/下载、双列显示与 root 进入
+- 系统/核心列表随新增核心更新（blastem、fixnes、bsnes-jg、mesen2 及对应 32 位列表）
+- 模拟器与核心在对应系统的 **SELECT** 菜单选择；OpenBOR 同系统内切换引擎
+- 显示（亮度/伽马/色温）、摇杆（死区/校准/布局/扳机）、摇杆与电源灯、电池服务、
+  风扇（Hotkey + Start）、性能（CPU/GPU/DMC 频率）、ZRAM、Wi-Fi/SSH、351Files
 
-### 系统特性
+### 系统行为
 
-- 关机状态下充电不会自动开机
-- 关机充电时点亮红色 LED；由于没有充电动画，插入时用震动提示，充满后 LED 熄灭
-- 电池驱动经过调整，电量显示更准确（关闭 batteryplus 时使用驱动数据）
-- 支持长按音量键快速加减电量
+- 关机充电不自动开机；充电时红色 LED + 震动提示，充满熄灭
+- 电池读数调整（关闭 batteryplus 时用驱动数据）；长按音量键快速加减电量
+- 亮度/色温持久化：`brightness-watch` 监控保存、开机恢复（游戏与 Kodi 同样生效）
 
-### 启动与内核
+### 构建
 
-- AveyondFly RK3562 开源 U-Boot（`uboot/rk3562-uboot-16m.bin`，16MB）
-- 每机型独立 DTB / extlinux 配置；U-Boot 开机 logo 与关机充电动画
-- 构建时写入品牌信息：plymouth `text.plymouth` 的标题改为 `dArkOS 3562 (YYYYMMDD)`，
-  与镜像名同源
-- 内核重编（Linaro 6.3.1 交叉工具链），含：
-  - `rk3562-joystick`（`play_joystick`）：mV 死区、`axis_to_dpad`、
-    `invert_abs*`、`swap_ab/swap_xy`、`swap_start_home`、`linear_triggers`、
-    `joypad_tuning`（运行时校准）
-  - 摇杆 RGB 灯驱动（`led-3562`）、风扇 PWM、RK817 电量/关机修复
-  - Wi-Fi：AIC8800（USB/SDIO）、ZTop ZT9101（USB），按机型自动加载
-  - zram、Kodi 的 Rockchip MPP 硬解
-- **DMC/内存频率未做内核改动**：可用频点由 ATF（DDR 固件）通过
-  `DRAM_GET_FREQ_INFO` 上报，内核按 DT 的 `system-status-level` 使用
+```bash
+# 依赖：sudo、losetup、rsync、btrfs-progs、exfatprogs、parted、dosfstools、gdisk、7z、xz
+# 基线镜像放仓库根目录，文件名固定：
+#   dArkOS_rg52mini_trixie_06242026.img
+
+sudo ./scripts/sync_image.sh --release
+```
+
+流程：刷 U-Boot → 构建期分区定尺 → 挂载 → 同步 boot/rootfs → 打包 roms.tar →
+depmod → 清理首启状态 → 输出 `dArkOS3562_YYYYMMDD.img` 与 `.sha256`。
+`DARKOS_BUILD_DATE=YYYYMMDD` 可复现日期；`--ci` 原地构建，不复制 12GB 镜像。
+
+### 烧录与首次开机
+
+- 用 dd / balenaEtcher 写入 SD 卡；**首启会重建 ROM 分区，刷机前备份 ROM/BIOS/存档**
+- 首启：hook 应用机型 quirks → 重建 ROM 分区为 exFAT 并解包 roms.tar → 自动重启，
+  第二次启动进入 ES；在 ES 中选择机型、连接 Wi-Fi（镜像不保存 Wi-Fi 密码）
 
 ### 目录结构
 
@@ -130,339 +126,153 @@ dArkOS 3562 是面向 RK3562 掌机的 Debian 游戏系统：以 EmulationStatio
 boot/      启动分区差异层（Image、hook.sh、DTB、extlinux）
 rootfs/    rootfs 差异层（/usr/local/bin、/opt、ES 配置等）
 uboot/     U-Boot 16MB blob 与刷写脚本
-scripts/   sync_image.sh / mount_arkos.sh / CI 辅助脚本
+scripts/   sync_image.sh / repart_image.sh / mount_arkos.sh / CI 辅助
 dtbtools/  PC 端 DTB 选择工具
-roms/      ROM 目录占位（实际内容在设备 SD 卡上）
+roms/      ROM 目录占位（实际 ROM 在设备 SD 卡）
 .github/   CI 工作流
 ```
-
-### ROM 放哪里
-
-ROM 都在 SD 卡的 exFAT 分区（挂载点 `/roms`），按系统分目录：
-
-```
-/roms/3ds/     .3ds .cci .cxi .cia .3dsx .zip .7z
-/roms/ps2/     .iso .chd .cso .bin .elf
-/roms/gc/      .iso .gcm .rvz .wbfs
-/roms/wii/     .iso .rvz .wbfs
-/roms/psx/     .bin/.cue .chd .pbp
-/roms/psp/     .iso .cso .chd .pbp
-/roms/nds/     .nds .zip .7z
-/roms/saturn/  .bin/.cue .chd
-/roms/krkr2/   游戏目录
-/roms/psvita/  .vpk / 已安装游戏
-/roms/gba|gb|gbc/ ...
-```
-
-### BIOS / 系统文件放哪里
-
-统一放在 **`/roms/bios/`**（RetroArch 的 system 目录、DuckStation、ARMSX2
-的 `[Folders] Bios` 都指向这里）：
-
-| 平台 | 需要的文件 | 放置位置 |
-|---|---|---|
-| PS1（DuckStation / PCSX ReARMed） | `SCPH1001.BIN`（美版）、`SCPH5500`（日版）、`SCPH5501`（美版）、`SCPH5502`（欧版） | `/roms/bios/` |
-| PS2（ARMSX2） | 任意有效 PS2 BIOS dump，如 `scph39001.bin`、`SCPH-70012_BIOS_V12_USA_200.bin` | `/roms/bios/` |
-| NDS（DSperate） | `nds_bios9.bin`、`nds_bios7.bin`、`nds_firmware.bin` | `/roms/bios/` |
-| Saturn（YabaSanshiro） | `sega_101.bin`（日版）、`mpr-17933.bin`（美/欧版） | `/roms/bios/` |
-| Dreamcast（Flycast） | `dc_boot.bin`、`dc_flash.bin`（可选） | `/roms/bios/` |
-| PS Vita（Vita3K） | 通过 Vita3K 界面导入系统固件 | Vita3K 自管 |
-| PCE CD / Sega CD 等光驱机种 | 对应核心要求的 BIOS | `/roms/bios/` |
-| GBA（armGBA） | **不需要 BIOS** | — |
-| 3DS（Azahar） | 游戏不需要 BIOS；部分游戏需要 3DS 系统文件，通过 Azahar 自身导入 | Azahar 自管 |
-| N64 / SNES / MD 等卡带机种 | **不需要 BIOS** | — |
-
-注意：
-
-- `SCPH1001.BIN` 是 PS1 BIOS，**PS2 不能使用**；但可以和 PS2 BIOS 放在同一目录，
-  ARMSX2 会按大小（4–8MB）和内容校验自动挑出 PS2 BIOS，跳过 PS1
-- PS2 没有 BIOS 时 ARMSX2 只能进主界面，无法启动游戏
-- BIOS 文件名通常不强制，但大小/内容必须是正确 dump（模拟器按内容识别）
-
-### 构建
-
-```bash
-# 依赖：sudo、losetup、rsync、btrfs-progs、exfatprogs、7z、xz、parted
-# 把基线镜像放到仓库根目录，文件名必须是：
-#   dArkOS_rg52mini_trixie_06242026.img
-
-sudo ./scripts/sync_image.sh --release
-```
-
-产物：
-
-```
-dArkOS3562_YYYYMMDD.img
-dArkOS3562_YYYYMMDD.img.sha256
-```
-
-- 镜像名使用构建日期（`YYYYMMDD`），同时写入 plymouth 标题 `dArkOS 3562 (YYYYMMDD)`
-- 需要复现某一版时：`DARKOS_BUILD_DATE=20261116 sudo ./scripts/sync_image.sh --release`
-- `--release` 清掉工作副本的首启状态并重置 extlinux，保证新卡走完整首启流程；
-  `--ci` 原地清理，不复制 12GB 镜像
-
-### 烧录与首次开机
-
-- 用 dd / balenaEtcher 等把 `.img` 写入 SD 卡
-- 首次启动会扩容并重新格式化 ROM 分区，**刷机前请备份 ROM / BIOS / 存档**
-- 首次启动执行 hook + 扩容后自动重启一次，第二次启动进入 ES
-- 进 ES 后选择机型（dtb）、连接 Wi-Fi；镜像不保存 Wi-Fi 密码
-
-### 云端 CI
-
-`.github/workflows/build-image.yml` 手动触发：
-
-- 基线镜像默认从 `bmdhacks/dArkOS_rg52mini` v06242026 的
-  `.7z.001/.002/.003` 下载（可用输入框或仓库变量 `DARKOS_BASE_URL` 覆盖）
-- `publish=true`：创建 draft Release（tag `dArkOS-YYYYMMDD`）并上传产物
-- `publish=false`：仅保存为 workflow artifact
-- 产物为 `dArkOS3562_YYYYMMDD.img.xz`，超过 1900MiB 自动 7z 分卷
-
-### 说明
-
-- 内存/DDR 频率由 ATF 与 DDR 固件决定，本项目不做内核覆盖
-- DuckStation 受协议限制只内置官方 AppImage
-- 不提供任何商业 ROM/BIOS 文件
 
 ---
 
 ## English
 
-### Overview
+### About
 
-dArkOS 3562 is a Debian-based gaming system for RK3562 handhelds. EmulationStation
-is the frontend; it integrates libretro cores and several standalone emulators,
-and adds the handheld-specific pieces: button mapping, LEDs, fan, power and
-performance management.
+dArkOS 3562 is a **diff-layer** repository for RK3562 handhelds: the flashable image is
+the baseline `dArkOS_rg52mini_trixie_06242026.img` (Debian trixie / aarch64, kernel
+5.10.226, Btrfs rootfs, exFAT ROM partition) with this repository's `boot/` and
+`rootfs/` overlaid. The baseline stays read-only and is never stored here;
+`scripts/sync_image.sh` builds the work copy and the release image.
 
-The system is maintained as a **diff layer**: the repository does not store a
-full image, only the changes on top of the read-only baseline
-`dArkOS_rg52mini_trixie_06242026.img`. Running `scripts/sync_image.sh` overlays
-those changes onto a work image and produces a complete, flashable image.
+This document lists only the **changes and additions on top of the baseline**.
 
-- One image supports all listed RK3562 handhelds; the model is selected on first boot.
-- The baseline image is read-only and never stored in the repository (~12 GB).
-- Target: Debian trixie (aarch64), kernel 5.10.226, Btrfs rootfs, exFAT ROM partition.
-- Cores larger than 100 MB are stored as `.so.xz` and expanded during the build.
+### Credits
 
-### Supported devices
+Built on top of upstream work — thanks to:
 
-| Brand | Device | DTB | Resolution | Menu key |
-|---|---|---|---|---|
-| AISLPC | RG52 Mini | `rk3562-rg52mini.dtb` | 1280x720 portrait | Home |
-| AISLPC | RG43V Pro | `rk3562-rg43h.dtb` | 1024x768 | Select |
-| AISLPC | RG43H Pro | `rk3562-rg43h.dtb` | 1024x768 | Select |
-| AISLPC | Pocket AIS | `rk3562-ais.dtb` | 1024x768 | Home |
-| XiFan | NGP45HT | `rk3562-ngp45ht.dtb` | 1024x768 | M |
-| XiFan | XF55H | `rk3562-xf55h.dtb` | 1280x720 | M |
+- [christianhaitian/dArkOS](https://github.com/christianhaitian/dArkOS/)
+- [bmdhacks/dArkOS_rg52mini](https://github.com/bmdhacks/dArkOS_rg52mini)
 
-Switching models: use the **DTB selector** on first boot, run the PC-side
-dtbselector in `dtbtools/`, or edit `FDT` in `/boot/extlinux/extlinux.conf`.
-On first boot `hook.sh` applies per-model quirks (SDL rotation, button mapping)
-and promotes itself to `/boot/firstboot.sh` for every subsequent boot.
+### Boot and image layout
 
-Controls:
+- AveyondFly RK3562 open-source U-Boot (16 MB blob: boot logo, charging display,
+  display support)
+- One image for six models (rg52mini / rg43h / rg43v / ais / ngp45ht / xf55h) with
+  per-model DTB and extlinux config; `console_detect` identifies the model,
+  `dtbtools/` (PC) writes the selection (and `/boot/.cn` for language)
+- **Build-time partitioning** (`scripts/repart_image.sh`): boot 256 MiB, rootfs
+  11264 MiB, ROM partition placeholder at the image tail; first boot only rebuilds the ROM partition as exFAT and grows it to the card
+  end — rootfs never changes on the device
+- `/roms.tar` is repacked from `roms/` increments plus the vendor skeleton
+  (adds 3ds / krkr2 / psvita / wii and per-system placeholders) and unpacked on first
+  boot
+- `hook.sh` is split in two: first boot / model change applies the full quirks
+  (hostname, SDL rotation libs, ES/RA/PPSSPP input, language and tools menu, ogage
+  hotkey, stick axes, private DuckStation); every boot only handles state that the
+  kernel/devices reset (uinput, Wi-Fi modules, rk817 shutdown/audio, font cache,
+  ldconfig). Backlight/color-temperature are restored by `brightness-watch`;
+  DuckStation / ARMSX2 hotkeys are written by their launchers at start time
 
-- **Hotkey + X (or Y)** opens the quick menu on most devices, where Hotkey is
-  the menu key above (Select also works as Hotkey).
-- Most emulators quit with **Start + Select**; in RetroArch, open the quick menu
-  first and exit from there.
+### Kernel
 
-### Emulators and cores
+- Kernel 5.10.226 rebuilt with Linaro 6.3.1:
+  - `rk3562-joystick`: mV deadzone, `axis_to_dpad`, `invert_abs*`, `swap_ab/swap_xy`,
+    `swap_start_home`, `linear_triggers`, runtime `joypad_tuning`
+  - power LED (`led-3562`), fan PWM, RK817 battery and shutdown fixes
+  - Wi-Fi: AIC8800 (SDIO/USB), ZTop ZT9101 (USB), loaded automatically per model
+  - zram, Rockchip MPP decoding for Kodi
+- No kernel changes for DMC/memory frequency: points come from ATF/DDR firmware and
+  the DT
 
-#### Standalone emulators
+### Standalone emulators (added or updated)
 
 | Platform | Implementation | Notes |
 |---|---|---|
-| PS2 | ARMSX2 | Vulkan + `malisx2 0.5.1`; BIOS in `/roms/bios`; launched by `ps2.sh` |
-| GameCube / Wii | Dolphin NoGUI | Vulkan by default, `VK_KHR_display` direct to KMS; `dolphin.sh` |
-| PS1 | DuckStation official mini AppImage | per-model hotkeys; settings/saves on the ROM partition; BIOS in `/roms/bios` |
-| PSP | PPSSPP / PPSSPP 2021 | two builds; the 2021 build now has Vulkan (`VK_KHR_display`) plus its GLES backend |
-| NDS | DSperate / DraStic | DSperate uses system Vulkan with a Chinese UI; NDS BIOS required |
-| Saturn | YabaSanshiro | four builds; BIOS required |
+| PS2 | ARMSX2 | Vulkan + `malisx2 0.5.1`; BIOS in `/roms/bios`, auto-detected by size/content |
+| GameCube / Wii | Dolphin NoGUI | Vulkan via `VK_KHR_display` |
+| PS1 | DuckStation official mini AppImage | per-model hotkeys; settings/saves on the ROM partition |
+| PSP | PPSSPP / PPSSPP 2021 | the 2021 build enables Vulkan (GLES kept) |
+| NDS | DSperate / DraStic | DSperate uses system Vulkan with a Chinese UI |
+| Saturn | YabaSanshiro | four builds |
 | Dreamcast | Flycast 2.7 / Flycast 2022 | both support Vulkan |
-| PS Vita | Vita3K-Plus | dedicated Wayland session; runtime files under `/opt/vita3k` |
-| J2ME | FreeJ2ME | standalone build with bundled CJK font and pad mapping |
-| Flash | Ruffle | new build; fullscreen at panel resolution, d-pad/stick drive a virtual mouse and Y clicks |
-| Visual novels | KRKR2 / onsCripter | KRKR2 games in `/roms/krkr2`; onsCripter also ships a core |
+| PS Vita | Vita3K-Plus | dedicated Wayland session; runtime under `/opt/vita3k` |
+| J2ME | FreeJ2ME | bundled CJK font and pad mapping |
+| Flash | Ruffle | new build; fullscreen at panel resolution, d-pad/stick as virtual mouse |
+| Visual novels | KRKR2 / onsCripter | KRKR2 games in `/roms/krkr2` |
 | Pico-8 | Fake08 | — |
-| N64 | mupen64plus | GLideN64 / Rice plugins; launched by `n64.sh` |
-| Runner | retrorun | supports the Flycast 2021 and Flycast 2022 cores |
-| Adventure engine | ScummVM 2026.4.0 | standalone; GIF/MPC compiled in, Vorbis statically linked, shader/vkeybd assets bundled |
-| Beat-em-up engine | OpenBOR / OpenBOR LNS | one system, switch engines: `openbor` (baseline) / `openborlns` (AveyondFly build) |
-| Video | Kodi 21.3 | Rockchip MPP hardware decoding; startup add-on prompts disabled |
+| N64 | mupen64plus | GLideN64 / Rice plugins |
+| Adventure engine | ScummVM 2026.4.0 | standalone; GIF/MPC, Vorbis, shader/vkeybd bundled |
+| Beat-em-up engine | OpenBOR / OpenBOR LNS | switch `openbor` / `openborlns` inside one system |
+| Video | Kodi 21.3 | Rockchip MPP decoding; startup add-on prompts disabled |
 
-#### libretro cores
+### libretro cores (added or updated)
 
-| Core | Notes |
-|---|---|
-| 3DS (Azahar) | Vulkan + self-built `malisx2` ICD; launched by `azahar.sh` |
-| armN64 | v1.3, alternative N64 core (64-bit only) |
-| parallel_n64 | defaults to GLES + Rice; a Vulkan variant is available for manual use |
-| parallel_dc | Dreamcast |
-| armGBA | v1.8, GBA / GB / GBC; Chinese core options, GPIO and EZ-Flash cartridge rumble; a 32-bit build is also provided |
-| GPSP | EZODE rumble and mGBA cheat support |
-| pcsx_rearmed | cheat-enabled build, the most efficient PS1 option |
-| mame2015 / mame2016 / native32 | arcade |
-| yabadabadoo | Saturn |
-| Other baseline cores | shipped with the image |
-| SNES / NES / MD family | snes9x2005, snes9x2010, snes9x2002, snes9x, bsnes, bsnes-jg, nestopia, fixNES, QuickNES, fceumm, Genesis-Plus-GX / Wide / Expanded, blastem, picodrive, smsplus-gx and Gearsystem rebuilt from the latest upstream code, 64-bit and 32-bit, with fully localized (Chinese) core options |
-| Mesen CE | New core covering NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG / WonderSwan; localized core options; 64-bit and 32-bit |
+- **2026-11 update**: snes9x2005, snes9x2010, snes9x2002, snes9x, bsnes, bsnes-jg,
+  nestopia, fixNES, QuickNES, fceumm, Genesis-Plus-GX / Wide / Expanded, blastem,
+  picodrive, smsplus-gx, Gearsystem — all rebuilt from the latest upstream code, 64-bit
+  and 32-bit, with Chinese core options written in-house
+- **Mesen CE**: new core for NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG /
+  WonderSwan, Chinese options, 64-bit and 32-bit
+- armGBA v1.8: Chinese options, GPIO and EZ-Flash rumble, 64-bit and 32-bit
+- armN64 v1.3 (64-bit only); parallel_n64 (GLES + Rice, plus a Vulkan variant)
+- PCE family (mednafen_pce_fast / pce / supergrafx): Chinese options, 32-bit builds,
+  per-ROM `.BIOS` / `.bios` auto-load
+- Others: Azahar (3DS, self-built malisx2 ICD), ppsspp2021 (Vulkan),
+  pcsx_rearmed (cheats), GPSP (EZODE rumble), mame2015/2016, native32, yabadabadoo,
+  parallel_dc
+- 32-bit fixes: picodrive links with a non-executable stack; QuickNES builds with
+  `NO_UNALIGNED_ACCESS` to avoid ARM unaligned `STRD` crashes
 
-### EmulationStation features
+### EmulationStation
 
-- RK3562 entry; emulators and cores grouped per system.
-- Wi-Fi UI and SSH service management.
-- Display settings: brightness, gamma, color temperature.
-- Stick settings: deadzone, user-space drift calibration, XBOX/NS layout switch,
-  optional linear-trigger reporting.
-- Stick LED and power LED management.
-- batteryplus service toggle.
-- Fan control (fan-equipped models only); Hotkey + Start toggles it from any screen.
-- Performance settings: CPU / GPU / DMC clocks; write the loader to eMMC to
-  unlock DMC 1056.
-- ZRAM management with multiple algorithms and sizes; LZ4 is recommended.
-- Emulator switching lives in each system's **SELECT** menu; choose the emulator
-  before the core, otherwise the core list is empty. OpenBOR switches between
-  `openbor` / `openborlns` inside the same system.
-- armGBA rumble can be turned off in its core options (on by default); its 32-bit
-  and 64-bit cores live in the RetroArch and RetroArch32 core directories.
-- 351Files: multiple LAN/wireless transfer protocols, Baidu Cloud upload/download,
-  dual-pane view and root access.
+- System/core lists updated for the new cores (blastem, fixnes, bsnes-jg, mesen2 and
+  their 32-bit entries)
+- Emulator and core are chosen in each system's **SELECT** menu; OpenBOR switches
+  engines within one system
+- Display (brightness/gamma/color temperature), sticks (deadzone/calibration/layout/
+  triggers), stick and power LEDs, battery service, fan (Hotkey + Start), performance
+  (CPU/GPU/DMC clocks), ZRAM, Wi-Fi/SSH, 351Files
 
-### System features
+### System behaviour
 
-- Charging while powered off does not boot the device.
-- A red LED lights up while charging with the device off; there is no charging
-  animation, so the device vibrates when charging starts, and the LED turns off
-  when fully charged.
-- The battery driver is tuned for more accurate readings (driver data is used
-  when batteryplus is disabled).
-- Long-press the volume keys to quickly raise or lower the battery level.
+- Charging while powered off does not boot; red LED plus a vibration when charging
+  starts, LED off when full
+- Battery readings tuned (driver data is used when batteryplus is off); long-press the
+  volume keys to change the battery level quickly
+- Brightness/color temperature persist: `brightness-watch` saves changes and restores
+  them at boot (games and Kodi included)
 
-### Boot and kernel
+### Build
 
-- AveyondFly RK3562 open-source U-Boot (`uboot/rk3562-uboot-16m.bin`, 16 MB).
-- Per-model DTB / extlinux configuration; U-Boot boot logo and shutdown-charging animation.
-- The build writes the brand into the plymouth title: `text.plymouth` becomes
-  `dArkOS 3562 (YYYYMMDD)`, matching the image name.
-- Kernel rebuilt with the Linaro 6.3.1 cross toolchain, including:
-  - `rk3562-joystick` (`play_joystick`): mV deadzone, `axis_to_dpad`,
-    `invert_abs*`, `swap_ab/swap_xy`, `swap_start_home`, `linear_triggers`,
-    `joypad_tuning` (runtime calibration)
-  - stick RGB LED driver (`led-3562`), fan PWM, RK817 battery/shutdown fixes
-  - Wi-Fi: AIC8800 (USB/SDIO) and ZTop ZT9101 (USB), loaded automatically per model
-  - zram, Rockchip MPP hardware decoding for Kodi
-- **No kernel changes for DMC/memory frequency**: available points are reported by
-  ATF (DDR firmware) through `DRAM_GET_FREQ_INFO`, and the kernel selects them via
-  the DT `system-status-level`.
+```bash
+# deps: sudo, losetup, rsync, btrfs-progs, exfatprogs, parted, dosfstools, gdisk, 7z, xz
+# the baseline must be at the repository root:
+#   dArkOS_rg52mini_trixie_06242026.img
+
+sudo ./scripts/sync_image.sh --release
+```
+
+Pipeline: flash U-Boot → build-time partitioning → mount → sync boot/rootfs → pack
+roms.tar → depmod → clear first-boot state → write `dArkOS3562_YYYYMMDD.img` and
+`.sha256`. Use `DARKOS_BUILD_DATE=YYYYMMDD` to reproduce a date; `--ci` builds in
+place without copying the 12 GB image.
+
+### Flashing and first boot
+
+- Write the image with dd or balenaEtcher; **the first boot rebuilds the ROM
+  partition, so back up ROMs/BIOS/saves first**
+- First boot: hook applies model quirks → ROM partition rebuilt as exFAT and roms.tar
+  unpacked → automatic reboot; the second boot starts ES. Select the model and join
+  Wi-Fi there (the image stores no Wi-Fi passwords)
 
 ### Directory layout
 
 ```
 boot/      boot-partition diff layer (Image, hook.sh, DTB, extlinux)
 rootfs/    rootfs diff layer (/usr/local/bin, /opt, ES config, ...)
-uboot/     U-Boot 16 MB blob and flashing scripts
-scripts/   sync_image.sh / mount_arkos.sh / CI helpers
+uboot/     U-Boot 16 MB blob and flashing script
+scripts/   sync_image.sh / repart_image.sh / mount_arkos.sh / CI helpers
 dtbtools/  PC-side DTB selection tool
-roms/      ROM directory placeholders (real content lives on the SD card)
+roms/      ROM directory placeholders (real ROMs live on the SD card)
 .github/   CI workflows
 ```
-
-### Where ROMs go
-
-ROMs live on the SD card's exFAT partition (mounted at `/roms`), one directory
-per system:
-
-```
-/roms/3ds/     .3ds .cci .cxi .cia .3dsx .zip .7z
-/roms/ps2/     .iso .chd .cso .bin .elf
-/roms/gc/      .iso .gcm .rvz .wbfs
-/roms/wii/     .iso .rvz .wbfs
-/roms/psx/     .bin/.cue .chd .pbp
-/roms/psp/     .iso .cso .chd .pbp
-/roms/nds/     .nds .zip .7z
-/roms/saturn/  .bin/.cue .chd
-/roms/krkr2/   game directories
-/roms/psvita/  .vpk / installed games
-/roms/gba|gb|gbc/ ...
-```
-
-### Where BIOS / system files go
-
-Everything goes in **`/roms/bios/`** (RetroArch's system directory, DuckStation,
-and ARMSX2's `[Folders] Bios` all point here):
-
-| Platform | Required files | Location |
-|---|---|---|
-| PS1 (DuckStation / PCSX ReARMed) | `SCPH1001.BIN` (US), `SCPH5500` (JP), `SCPH5501` (US), `SCPH5502` (EU) | `/roms/bios/` |
-| PS2 (ARMSX2) | any valid PS2 BIOS dump, e.g. `scph39001.bin`, `SCPH-70012_BIOS_V12_USA_200.bin` | `/roms/bios/` |
-| NDS (DSperate) | `nds_bios9.bin`, `nds_bios7.bin`, `nds_firmware.bin` | `/roms/bios/` |
-| Saturn (YabaSanshiro) | `sega_101.bin` (JP), `mpr-17933.bin` (US/EU) | `/roms/bios/` |
-| Dreamcast (Flycast) | `dc_boot.bin`, `dc_flash.bin` (optional) | `/roms/bios/` |
-| PS Vita (Vita3K) | import system firmware through the Vita3K UI | managed by Vita3K |
-| PCE CD / Sega CD and other CD-based systems | the BIOS required by the core | `/roms/bios/` |
-| GBA (armGBA) | **no BIOS needed** | — |
-| 3DS (Azahar) | no BIOS for games; some games need 3DS system files, imported through Azahar | managed by Azahar |
-| N64 / SNES / MD and other cartridge systems | **no BIOS needed** | — |
-
-Notes:
-
-- `SCPH1001.BIN` is a PS1 BIOS and **cannot be used for PS2**; it may still sit in
-  the same folder, as ARMSX2 picks the PS2 dump by size (4–8 MB) and content.
-- Without a PS2 BIOS, ARMSX2 can only reach its main menu, not boot games.
-- BIOS file names are usually not enforced, but the size and content must be a
-  correct dump (emulators identify files by content).
-
-### Build
-
-```bash
-# deps: sudo, losetup, rsync, btrfs-progs, exfatprogs, 7z, xz, parted
-# place the baseline image at the repository root as:
-#   dArkOS_rg52mini_trixie_06242026.img
-
-sudo ./scripts/sync_image.sh --release
-```
-
-Output:
-
-```
-dArkOS3562_YYYYMMDD.img
-dArkOS3562_YYYYMMDD.img.sha256
-```
-
-- The image name uses the build date (`YYYYMMDD`), and the same date is written
-  into the plymouth title `dArkOS 3562 (YYYYMMDD)`.
-- Reproduce a specific build with:
-  `DARKOS_BUILD_DATE=20261116 sudo ./scripts/sync_image.sh --release`
-- `--release` clears first-boot state from the work copy and resets extlinux so a
-  new card runs the full first-boot flow; `--ci` cleans in place without copying
-  the 12 GB image.
-
-### Flashing and first boot
-
-- Write the `.img` to an SD card with dd or balenaEtcher.
-- The first boot expands and reformats the ROM partition, **so back up ROM /
-  BIOS / saves before flashing**.
-- The first boot runs hook + expansion and reboots once; the second boot starts ES.
-- In ES, select the device model (DTB) and join Wi-Fi. Wi-Fi passwords are not
-  stored in the image.
-
-### CI
-
-`.github/workflows/build-image.yml` is triggered manually:
-
-- The baseline is downloaded from the `bmdhacks/dArkOS_rg52mini` v06242026
-  `.7z.001/.002/.003` parts by default (overridable via the input field or the
-  repository variable `DARKOS_BASE_URL`).
-- `publish=true`: create a draft Release (tag `dArkOS-YYYYMMDD`) and upload artifacts.
-- `publish=false`: store as a workflow artifact only.
-- The artifact is `dArkOS3562_YYYYMMDD.img.xz`; anything over 1900 MiB is split
-  into 7z volumes automatically.
-
-### Notes
-
-- Memory/DDR frequency is controlled by ATF and the DDR firmware; this project
-  does not override it in the kernel.
-- DuckStation is limited to the official AppImage build for licensing reasons.
-- No commercial ROM or BIOS files are included.
