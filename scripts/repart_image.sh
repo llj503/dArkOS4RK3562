@@ -82,7 +82,8 @@ if [[ "$need_boot" == "no" && "$need_root" == "no" ]]; then
     NEW_P5_END=$(( IMG_SECTORS - 34 ))
     echo "== 补建 p5 占位: ${NEW_P5_START}s-$NEW_P5_END"
     sudo parted -s "$LOOP" unit s mkpart primary "$NEW_P5_START" "${NEW_P5_END}s"
-    sudo sfdisk --change-id "$LOOP" 5 6 2>/dev/null || true
+    sudo parted -s "$LOOP" name 5 5 >/dev/null 2>&1 || true
+    sudo parted -s "$LOOP" set 5 msftdata on >/dev/null 2>&1 || true
     sudo partprobe "$LOOP" || true; settle
     sudo mkfs.vfat -F 16 -n ROMS "${LOOP}p5" >/dev/null
   fi
@@ -164,7 +165,10 @@ echo "loop: $LOOP"
 # ---------- 重建 p3 ----------
 echo "== 重建 p3: ${BOOT_TARGET_MB}MiB FAT32"
 sudo parted -s "$LOOP" unit s mkpart primary fat32 "${NEW_P3_START}s" "${NEW_P3_END}s"
-sudo sfdisk --change-id "$LOOP" 3 b 2>/dev/null || true
+# 与基线一致: 分区名 dArkOS_Fat + legacy_boot/msftdata 标志
+sudo parted -s "$LOOP" name 3 dArkOS_Fat >/dev/null 2>&1 || true
+sudo parted -s "$LOOP" set 3 legacy_boot on >/dev/null 2>&1 || true
+sudo parted -s "$LOOP" set 3 msftdata on >/dev/null 2>&1 || true
 sudo partprobe "$LOOP" || true; settle
 sudo mkfs.vfat -F 32 -n "$BOOT_LABEL" "${LOOP}p3" >/dev/null
 sudo mount "${LOOP}p3" "$MNT_BOOT_NEW"
@@ -175,6 +179,8 @@ sudo umount "$MNT_BOOT_NEW"
 # ---------- 重建 p4 并铺满文件系统 ----------
 echo "== 重建 p4: ${ROOT_TARGET_MB}MiB (btrfs, 数据已搬运)"
 sudo parted -s "$LOOP" unit s mkpart primary "${NEW_P4_START}s" "${NEW_P4_END}s"
+sudo parted -s "$LOOP" name 4 rootfs >/dev/null 2>&1 || true
+sudo parted -s "$LOOP" set 4 msftdata on >/dev/null 2>&1 || true
 sudo partprobe "$LOOP" || true; settle
 sudo btrfs device scan --forget 2>/dev/null || true
 sudo mount -t btrfs "${LOOP}p4" "$MNT_ROOT"
@@ -185,7 +191,8 @@ sudo umount "$MNT_ROOT"
 if [[ -n "${ROM_FS:-}" ]]; then
   echo "== 重建 p5: $ROM_FS/$ROM_LABEL (${NEW_P5_START}s-${NEW_P5_END}s)"
   sudo parted -s "$LOOP" unit s mkpart primary "${NEW_P5_START}s" "${NEW_P5_END}s"
-  sudo sfdisk --change-id "$LOOP" 5 6 2>/dev/null || true
+  sudo parted -s "$LOOP" name 5 5 >/dev/null 2>&1 || true
+  sudo parted -s "$LOOP" set 5 msftdata on >/dev/null 2>&1 || true
   sudo partprobe "$LOOP" || true; settle
   case "$ROM_FS" in
     vfat|fat32|fat16) sudo mkfs.vfat -F 16 -n "$ROM_LABEL" "${LOOP}p5" >/dev/null 2>&1 || sudo mkfs.vfat -n "$ROM_LABEL" "${LOOP}p5" >/dev/null ;;

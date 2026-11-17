@@ -109,8 +109,12 @@ sleep 5
     # rootfs (p4) 已在构建期定尺为 11G (scripts/repart_image.sh),
     # 首启只重建 ROM 分区 p5: 从 p4 尾部到整卡末尾, 全部给 ROM.
     printf "d\n5\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
-    printf "n\n5\n\nt\n5\n11\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
+    printf "n\n5\n\n\nt\n5\n11\nw\n" | sudo fdisk /dev/${primary_block} &> /dev/null
     echo 45
+    if ! sudo blockdev --getsize64 /dev/${primary_block}p5 >/dev/null 2>&1; then
+      echo "p5 创建失败" > /tmp/code.txt
+      exit 1
+    fi
 
     sudo mkfs.exfat -c 16K -L EASYROMS /dev/hda3 &> /dev/null
     exitcode=$?
