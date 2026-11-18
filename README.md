@@ -44,7 +44,7 @@ Btrfs rootfs、exFAT ROM 分区）叠加本仓库的 `boot/` 与 `rootfs/` 得�
 
 - **2.1 PS2 / ARMSX2（新增）**：默认 Vulkan，BIOS 放 `/roms/bios`；**hotkey + Y 打开菜单**
 - **2.2 Wii / NGC / Dolphin（新增）**：默认 Vulkan，游戏放 `/roms/wii`、`/roms/gc`；**Start + Select 退出**
-- **2.3 NDS / DSperate（新增）**：**Select + Y 打开菜单**
+- **2.3 NDS / DSperate（新增）**：**Select + Y 打开菜单**；优化中文字体显示，支持 Vulkan 渲染
 - **2.4 Fake08（更新）**
 - **2.5 Flycast 2.7（更新）**：支持 Vulkan；**Select 打开菜单**
 - **2.6 Flycast 2022（新增）**：支持 Vulkan；**Select 打开菜单**
@@ -62,7 +62,7 @@ Btrfs rootfs、exFAT ROM 分区）叠加本仓库的 `boot/` 与 `rootfs/` 得�
 - **2.16 Kodi（更新）**：支持硬件解码视频（Rockchip MPP）
 - **2.17 FreeJ2ME（新增）**：独立模拟器；**Select + X 打开菜单**
 - **2.18 OpenBOR LNS（新增）**：AveyondFly 的新构建，与 OpenBOR 在同一系统内切换
-- **2.19 RetroArch（更新）**：支持 Vulkan
+- **2.19 RetroArch（更新）**：更新到 2026 年 11 月版本，支持 Vulkan，并修复 Vulkan 旋转下快捷菜单错乱
   - hotkey + X 打开菜单；hotkey + Y 显示帧率
   - hotkey + L 回溯（默认关闭）；hotkey + R 快进
   - hotkey + L2 读取存档；hotkey + R2 保存存档
@@ -71,7 +71,7 @@ Btrfs rootfs、exFAT ROM 分区）叠加本仓库的 `boot/` 与 `rootfs/` 得�
 
 - **3.1 ArmN64（新增）**：核心选项全汉化
 - **3.2 Parallel N64（更新）**：核心选项全汉化
-- **3.3 3DS / Azahar（新增）**：支持 Vulkan，核心选项全汉化
+- **3.3 3DS / Azahar（新增）**：支持 Vulkan，核心选项全汉化；游戏内可用 **hotkey + A** 切换布局，快捷键（ABXY）可在核心选项中修改
 - **3.4 GPSP（新增）**：支持 EZODE 震动与 mGBA 金手指，核心选项全汉化
 - **3.5 mame2015 / mame2016 / native32（新增）**
 - **3.6 YabaSanshiro 土星核心（新增）**：核心选项全汉化
@@ -81,7 +81,8 @@ Btrfs rootfs、exFAT ROM 分区）叠加本仓库的 `boot/` 与 `rootfs/` 得�
 - **3.10 ArmGBA（新增）**：效率高于 GPSP，移植 EZODE 震动，核心选项全汉化
 - **3.11 全部 PCE 核心（更新）**：BIOS 自动加载（读取游戏同名 `.BIOS`），核心选项全汉化
 - **3.12 NES / SNES / MD 等核心（更新）**：全部回到上游最新源码重编，核心选项补全汉化，64 位 + 32 位
-- **3.13 Mesen CE（新增）**：NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG / WonderSwan，核心选项中文，64 位 + 32 位
+- **3.13 XBOX / hakuX（新增）**：支持 Vulkan，核心选项全汉化（读取 `.iso` / `.chd`，需 64 位 RetroArch + Vulkan）
+- **3.14 Mesen CE（新增）**：NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG / WonderSwan，核心选项中文，64 位 + 32 位
 
 ### 4. EmulationStation 功能添加
 
@@ -92,10 +93,10 @@ Btrfs rootfs、exFAT ROM 分区）叠加本仓库的 `boot/` 与 `rootfs/` 得�
 - **4.5** 新增摇杆灯与电源灯管理
 - **4.6** 新增 batteryplus 服务，可自行选择开关
 - **4.7** 新增风扇控制入口（仅带风扇设备），任意界面可用 **hotkey + Start** 切换开关
-- **4.8** 新增性能设置入口：CPU / GPU / DMC 频率，可将 loader 写入 eMMC 解锁 DMC 1056
+- **4.8** 新增性能设置入口：CPU / GPU / DMC 频率。默认 TF 卡系统 DMC 为 920M；AISLPC 的 DMC 限制 800，XiFan 限制 1056。芯片默认安全上限为 920，AISLPC 需先把 Loader 写入 eMMC 才能使用 920M；同时提供 Loader 更新入口
 - **4.9** 新增 ZRAM 管理：多种算法、多种大小缓解内存压力，推荐 LZ4
 - **4.10** 模拟器切换移到对应模拟器界面按 **SELECT** 打开；选择核心前请先选择模拟器，否则核心为空
-- **4.11** 增强 351Files：支持更多局域网无线传输协议、百度云上传/下载、双列显示、root 用户进入
+- **4.11** 外接 USB Wi-Fi：Wi-Fi 列表内可在多个无线网口（内置 wlan0 / USB 网卡）之间切换，切换后按所选网口扫描与连接
 
 ### 5. 系统调整
 
@@ -109,6 +110,7 @@ Btrfs rootfs、exFAT ROM 分区）叠加本仓库的 `boot/` 与 `rootfs/` 得�
   - hotkey + 上：增加亮度
   - hotkey + 下：减少亮度
   - hotkey + Start：切换风扇 开/关
+- **5.6** 增强 351Files：支持更多局域网无线传输协议，支持从百度云上传/下载，支持双列显示，支持 root 用户进入
 
 ---
 
@@ -188,7 +190,7 @@ After flashing, use the **DTB selector** to switch models:
 
 - **2.1 PS2 / ARMSX2 (new)**: Vulkan by default, BIOS in `/roms/bios`; **hotkey + Y opens the menu**
 - **2.2 Wii / GameCube / Dolphin (new)**: Vulkan by default, games in `/roms/wii`, `/roms/gc`; **Start + Select exits**
-- **2.3 NDS / DSperate (new)**: **Select + Y opens the menu**
+- **2.3 NDS / DSperate (new)**: **Select + Y opens the menu**; improved Chinese font rendering, Vulkan rendering
 - **2.4 Fake08 (updated)**
 - **2.5 Flycast 2.7 (updated)**: Vulkan support; **Select opens the menu**
 - **2.6 Flycast 2022 (new)**: Vulkan support; **Select opens the menu**
@@ -206,7 +208,7 @@ After flashing, use the **DTB selector** to switch models:
 - **2.16 Kodi (updated)**: hardware video decoding (Rockchip MPP)
 - **2.17 FreeJ2ME (new)**: standalone emulator; **Select + X opens the menu**
 - **2.18 OpenBOR LNS (new)**: new AveyondFly build, switchable with OpenBOR inside one system
-- **2.19 RetroArch (updated)**: Vulkan support
+- **2.19 RetroArch (updated)**: updated to the November 2026 build with Vulkan support, and the quick menu no longer corrupts under rotated Vulkan
   - hotkey + X opens the menu; hotkey + Y toggles the FPS display
   - hotkey + L rewind (off by default); hotkey + R fast forward
   - hotkey + L2 load state; hotkey + R2 save state
@@ -215,7 +217,7 @@ After flashing, use the **DTB selector** to switch models:
 
 - **3.1 ArmN64 (new)**: fully localized core options
 - **3.2 Parallel N64 (updated)**: fully localized core options
-- **3.3 3DS / Azahar (new)**: Vulkan support, fully localized core options
+- **3.3 3DS / Azahar (new)**: Vulkan support, fully localized core options; **hotkey + A** switches the layout in game, and the shortcut (ABXY) is configurable in the core options
 - **3.4 GPSP (new)**: EZODE rumble and mGBA cheats, fully localized core options
 - **3.5 mame2015 / mame2016 / native32 (new)**
 - **3.6 YabaSanshiro Saturn core (new)**: fully localized core options
@@ -225,7 +227,8 @@ After flashing, use the **DTB selector** to switch models:
 - **3.10 ArmGBA (new)**: faster than GPSP, EZODE rumble ported, fully localized core options
 - **3.11 All PCE cores (updated)**: automatic BIOS loading (same-name `.BIOS`), fully localized core options
 - **3.12 NES / SNES / MD and related cores (updated)**: rebuilt from the latest upstream sources, complete Chinese core options, 64-bit and 32-bit
-- **3.13 Mesen CE (new)**: NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG / WonderSwan, Chinese core options, 64-bit and 32-bit
+- **3.13 XBOX / hakuX (new)**: Vulkan support, fully localized core options (`.iso` / `.chd`, needs 64-bit RetroArch with Vulkan)
+- **3.14 Mesen CE (new)**: NES / FDS / SNES / GB / GBC / GBA / PCE / SMS / GG / WonderSwan, Chinese core options, 64-bit and 32-bit
 
 ### 4. EmulationStation additions
 
@@ -236,10 +239,10 @@ After flashing, use the **DTB selector** to switch models:
 - **4.5** Stick LED and power LED management
 - **4.6** batteryplus service toggle
 - **4.7** Fan control entry (fan-equipped models only); **hotkey + Start** toggles it from any screen
-- **4.8** Performance settings: CPU / GPU / DMC clocks; write the loader to eMMC to unlock DMC 1056
+- **4.8** Performance settings: CPU / GPU / DMC clocks. The default TF-card system runs DMC at 920M; AISLPC caps it at 800 and XiFan at 1056. The chip's stock safe limit is 920, and AISLPC needs the loader written to eMMC before 920M can be used; a loader update entry is provided as well
 - **4.9** ZRAM management: several algorithms and sizes to relieve memory pressure (LZ4 recommended)
 - **4.10** Emulator switching moved into each system's **SELECT** menu; choose the emulator before the core, otherwise the core list is empty
-- **4.11** Enhanced 351Files: more LAN/wireless protocols, Baidu Cloud upload/download, dual-pane view, root access
+- **4.11** External USB Wi-Fi: the Wi-Fi list can switch between wireless interfaces (built-in wlan0 / USB adapter), and scans and connects on the selected one
 
 ### 5. System changes
 
@@ -253,6 +256,7 @@ After flashing, use the **DTB selector** to switch models:
   - hotkey + Up: brightness up
   - hotkey + Down: brightness down
   - hotkey + Start: toggle the fan on/off
+- **5.6** Enhanced 351Files: more LAN/wireless transfer protocols, Baidu Cloud upload/download, dual-pane view, and root access
 
 ---
 
