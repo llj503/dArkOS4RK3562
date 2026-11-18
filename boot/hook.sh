@@ -426,6 +426,7 @@ apply_all_quirks() {
   apply_joy_conf
   apply_sdl_rotation "$SCREEN_ROTATION"
   apply_vita3k_hotkeys
+  apply_vita3k_screen
   if [[ -f /boot/.cn ]]; then
     apply_localization cn
     apply_tools_gamelist cn
@@ -511,6 +512,20 @@ apply_vita3k_hotkeys() {
     chown 1000:1000 "$f/.hotkey-type" "$f/.menu-combo" 2>/dev/null || true
   done
   msg "Vita3K menu: hotkey($HOTKEY_TYPE)=$hk + X=307"
+}
+
+# Vita3K-Plus: 屏幕几何同为设备差异, 由 console-detect 判定后分发, 不写死机型.
+# psv.sh 消费它来决定 OSD 尺寸和 weston 的 output transform, 详见那里的说明.
+apply_vita3k_screen() {
+  local d f
+  for d in /roms /roms2; do
+    [ -d "$d" ] || continue
+    f="$d/psvita/Vita3k"
+    mkdir -p "$f" 2>/dev/null || continue
+    printf '%s %s %s\n' "$SCREEN_WIDTH" "$SCREEN_HEIGHT" "$SCREEN_ROTATION" > "$f/.screen"
+    chown 1000:1000 "$f/.screen" 2>/dev/null || true
+  done
+  msg "Vita3K screen: ${SCREEN_WIDTH}x${SCREEN_HEIGHT} rot=$SCREEN_ROTATION"
 }
 
 # RetroArch udev 手柄的轴编号按"已存在的 ABS 轴"压缩, 不是 evdev 的 ABS 码:
@@ -665,6 +680,7 @@ main() {
   # gptokeyb (onscripter 的菜单导航) 需要写 uinput
   chmod 666 /dev/uinput 2>/dev/null || true
   [ -f /roms/psvita/Vita3k/.menu-combo ] || apply_vita3k_hotkeys
+  [ -f /roms/psvita/Vita3k/.screen ] || apply_vita3k_screen
   load_wifi_modules
   # 清 RK817 POWER_EN_SAVE0/1，避免关机时 reboot-notifier 把 POWER_EN
   # 恢复回去导致关机后自启；与 ROCKNIX 的 not-save-power-en 等价.
