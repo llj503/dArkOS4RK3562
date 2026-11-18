@@ -152,10 +152,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Read the level ES is running at, not the one it leaves behind: ES blanks the
+# panel on shutdown, so sampling after the stop records 0 and every later
+# "restore" pins the backlight at 0 -- a black screen that looks like a crash.
+[ -r "$BL_SYS" ] && BL_SAVED=$(cat "$BL_SYS")
+
 systemctl stop emulationstation
 # Let ES drop DRM master before Weston asks for it.
 sleep 2
-[ -r "$BL_SYS" ] && BL_SAVED=$(cat "$BL_SYS")
 set_governors
 
 # Follow the ES language, same detection as dArkOS4RK3562's flycast/ps2
@@ -179,11 +183,68 @@ chown ark:ark "$RTDIR" 2>/dev/null || true
 chmod 0700 "$RTDIR" 2>/dev/null || true
 
 export XDG_RUNTIME_DIR="$RTDIR"
+
+# ---- compositor geometry -------------------------------------------------
+# Two device facts drive this, and console-detect is the only supported source
+# for them:
+#   * the logical screen size, which is what kiosk-shell turns into the
+#     fullscreen state every toplevel gets;
+#   * the panel orientation, which weston has to compensate for.
+# kiosk-shell forces fullscreen and xdg-shell rejects a window geometry larger
+# than that state, so a client that guesses wrong dies on connect. vita3k-osd
+# hard-codes 1024x768 and therefore dies on a 720-pixel-wide panel, leaving a
+# black screen and no menu; it reads OSD_W/OSD_H instead, so export the real
+# size here. The pad mapper and the OSD it spawns inherit these, which covers
+# the in-game menu as well as the setup panel.
+_CD=$(/usr/local/bin/console-detect 2>/dev/null || true)
+_RES=$(printf '%s\n' "$_CD" | awk -F: '/屏幕分辨率/ {gsub(/[^0-9x]/, "", $2); print $2; exit}')
+_ROT=$(printf '%s\n' "$_CD" | awk -F: '/屏幕旋转/ {gsub(/[^0-9]/, "", $2); print $2; exit}')
+case "$_RES" in
+    [0-9]*x[0-9]*) export OSD_W="${_RES%x*}" OSD_H="${_RES#*x}" ;;
+esac
+# weston counts the transform the opposite way from console-detect's angle:
+# xf55h reports 90 and needs rotate-270, otherwise the image lands upside down.
+# The output section must name the connector -- weston only applies a named
+# [output] section, so a hard-coded DSI-1 silently does nothing when the panel
+# sits on another connector, and an unnamed section is ignored for the same
+# reason. Pick the connected DSI head, else the first connected real head.
+_OUTPUT=
+_OUTPUT_OTHER=
+for _s in /sys/class/drm/card*-*/status; do
+    [ -r "$_s" ] || continue
+    [ "$(cat "$_s" 2>/dev/null)" = "connected" ] || continue
+    _n=$(basename "$(dirname "$_s")")
+    _n=${_n#card*-}
+    case "$_n" in
+        Writeback*|Virtual*|"") continue ;;
+        DSI*) _OUTPUT=$_n; break ;;
+        *) [ -n "$_OUTPUT_OTHER" ] || _OUTPUT_OTHER=$_n ;;
+    esac
+done
+[ -n "$_OUTPUT" ] || _OUTPUT=$_OUTPUT_OTHER
+# Written to the ROM config dir (rule: emulator config lives next to the ROMs)
+# and passed with --config, because a stale weston.ini under /root/.config
+# would otherwise win weston's search order.
+WESTON_INI="$DATA/weston.ini"
+export WESTON_INI
+case "$_ROT" in
+    90)  _TRANSFORM=rotate-270 ;;
+    270) _TRANSFORM=rotate-90 ;;
+    180) _TRANSFORM=rotate-180 ;;
+    *)   _TRANSFORM=normal ;;
+esac
+if [ -n "$_OUTPUT" ]; then
+    printf '[output]\nname=%s\ntransform=%s\n' "$_OUTPUT" "$_TRANSFORM" > "$WESTON_INI" 2>/dev/null || true
+else
+    printf '[output]\ntransform=%s\n' "$_TRANSFORM" > "$WESTON_INI" 2>/dev/null || true
+fi
+
 # PSVITA_WESTON_DEBUG=1 adds --debug, which is what authorises the
 # weston-screenshooter / weston-debug protocols. Off by default: it exposes the
 # compositor's debug protocol to every client.
 WESTON_EXTRA=()
 [ "${PSVITA_WESTON_DEBUG:-0}" = "1" ] && WESTON_EXTRA+=(--debug)
+[ -s "$WESTON_INI" ] && WESTON_EXTRA+=(--config="$WESTON_INI")
 # Weston lives in the app bundle; only its two module directories are
 # reachable from /usr (symlinks into $WESTON_HOME/lib), because weston resolves
 # backends and shells at the compiled-in paths. libseat is not in the base
