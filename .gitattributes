@@ -1,6 +1,0 @@
-# 这两个文件是被直接 execve 的（systemd-run 启动 psv.sh、vita3k-pad.py 用
-# subprocess.Popen 拉起 vita3k-osd），CRLF 会让内核解析 shebang 失败：
-# shell 有 ENOEXEC 回退所以看不出来，但 Popen/execve 会直接报 Exec format error。
-# 固定 LF，避免 core.autocrlf 在不同平台上改变行尾。
-rootfs/opt/vita3k/bin/vita3k-osd text eol=lf
-rootfs/usr/local/bin/psv.sh        text eol=lf
