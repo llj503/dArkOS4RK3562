@@ -181,10 +181,10 @@ chmod 0700 "$RTDIR" 2>/dev/null || true
 export XDG_RUNTIME_DIR="$RTDIR"
 
 # ---- compositor geometry -------------------------------------------------
-# 屏幕几何由 hook.sh 判定后写入 /roms(2)/psvita/Vita3k/.screen ("宽 高 旋转"),
-# 这里只消费. kiosk-shell 强制全屏, xdg-shell 又拒绝比全屏更大的窗口几何, 而
-# vita3k-osd 写死 1024x768 -- 不导出 OSD_W/OSD_H 就会被合成器杀掉(黑屏无菜单).
-# pad.py 及它拉起的游戏内 OSD 是子进程, 继承同一份环境.
+# 屏幕几何属机型差异: 唯一来源是 console_detect, hook.sh 已写进 .screen, 没写就现问.
+# kiosk-shell 强制全屏, xdg-shell 又拒绝比全屏更大的窗口几何, 而 vita3k-osd 默认
+# 1024x768 -- 不导出 OSD_W/OSD_H 就会被合成器杀掉(黑屏无菜单). pad.py 及其拉起的
+# 游戏内 OSD 是子进程, 继承同一份环境.
 SCREEN_CFG="$DATA/.screen"
 _SCREEN_W=
 _SCREEN_H=
@@ -192,51 +192,42 @@ _SCREEN_ROT=0
 if [ -r "$SCREEN_CFG" ]; then
     read -r _SCREEN_W _SCREEN_H _SCREEN_ROT < "$SCREEN_CFG" || true
 fi
-# hook.sh 还没写过(新卡首启/刚切设备): 退回 DRM mode 不旋转, 至少别让 OSD 被杀.
 if [ -z "$_SCREEN_W" ] || [ -z "$_SCREEN_H" ]; then
-    _MODE=
-    for _m in /sys/class/drm/*/modes; do
-        [ -r "$_m" ] || continue
-        _MODE=$(head -n 1 "$_m" 2>/dev/null | tr -d ' \r')
-        [ -n "$_MODE" ] && break
-    done
-    _SCREEN_W=${_MODE%x*}
-    _SCREEN_H=${_MODE#*x}
+    eval "$(/usr/local/bin/console_detect -s 2>/dev/null | tr -d '\r')" || true
+    _SCREEN_W=${SCREEN_WIDTH:-}
+    _SCREEN_H=${SCREEN_HEIGHT:-}
+    _SCREEN_ROT=${SCREEN_ROTATION:-0}
 fi
 case "$_SCREEN_W" in
     [0-9]*) export OSD_W="$_SCREEN_W" OSD_H="$_SCREEN_H" ;;
 esac
 
-# weston 的 transform 方向与 console-detect 的角度相反: 报 90 度要用 rotate-270, 否则上下颠倒.
+# weston 的 transform 方向与 console_detect 的角度相反: 报 90 度要 rotate-270.
 case "$_SCREEN_ROT" in
     90)  _TRANSFORM=rotate-270 ;;
     270) _TRANSFORM=rotate-90 ;;
     180) _TRANSFORM=rotate-180 ;;
     *)   _TRANSFORM=normal ;;
 esac
-# [output] 必须带 name=(无名段 weston 不应用 transform); 连接器名取自 sysfs 已连接的 DSI 头.
+# [output] 必须带 name=, 无名段 weston 14 不应用 transform; console_detect 不报 DRM
+# 连接器名, 这里问的是运行时拓扑(内屏 DSI 优先), 不是机型常量.
 _OUTPUT=
-_OUTPUT_OTHER=
 for _s in /sys/class/drm/card*-*/status; do
-    [ -r "$_s" ] || continue
     [ "$(cat "$_s" 2>/dev/null)" = "connected" ] || continue
-    _n=$(basename "$(dirname "$_s")")
-    _n=${_n#card*-}
-    case "$_n" in
-        Writeback*|Virtual*|"") continue ;;
-        DSI*) _OUTPUT=$_n; break ;;
-        *) [ -n "$_OUTPUT_OTHER" ] || _OUTPUT_OTHER=$_n ;;
-    esac
+    _n=${_s#/sys/class/drm/card*-}
+    _n=${_n%/status}
+    case "$_n" in Writeback*|Virtual*|"") continue ;; esac
+    [ -n "$_OUTPUT" ] || _OUTPUT=$_n
+    case "$_n" in DSI*) _OUTPUT=$_n; break ;; esac
 done
-[ -n "$_OUTPUT" ] || _OUTPUT=$_OUTPUT_OTHER
-# 用 --config 显式指定: /root/.config 或 /etc/xdg 的残留副本会抢 weston 的搜索顺序.
+# --config 显式指定: /root/.config 或 /etc/xdg 的残留副本会抢 weston 的搜索顺序.
 WESTON_INI="$DATA/weston.ini"
 export WESTON_INI
-if [ -n "$_OUTPUT" ]; then
-    printf '[output]\nname=%s\ntransform=%s\n' "$_OUTPUT" "$_TRANSFORM" > "$WESTON_INI" 2>/dev/null || true
-else
-    printf '[output]\ntransform=%s\n' "$_TRANSFORM" > "$WESTON_INI" 2>/dev/null || true
-fi
+{
+    printf '[output]\n'
+    [ -n "$_OUTPUT" ] && printf 'name=%s\n' "$_OUTPUT"
+    printf 'transform=%s\n' "$_TRANSFORM"
+} > "$WESTON_INI" 2>/dev/null || true
 
 # PSVITA_WESTON_DEBUG=1 adds --debug, which is what authorises the
 # weston-screenshooter / weston-debug protocols. Off by default: it exposes the
