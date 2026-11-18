@@ -30,15 +30,6 @@ export MALLOC_MMAP_THRESHOLD_=131072
 printf "\n\n\e[32mStarting Kodi.  Please wait..."
 #export LD_LIBRARY_PATH=/opt/kodi/libs/:/opt/kodi/libs/samba
 
-# dArkOS3562: panel rotation from console_detect -> Kodi RGA blit rotation
-# (KODI_VIDEO_ROTATION=0/90/180/270; portrait panels render landscape and
-# every frame is rotated through RGA into the scanout buffer)
-if [[ -x /usr/local/bin/console_detect ]]; then
-  eval "$(/usr/local/bin/console_detect -s 2>/dev/null)"
-  export KODI_VIDEO_ROTATION="${SCREEN_ROTATION:-0}"
-  echo "Kodi rotation: ${KODI_VIDEO_ROTATION}"
-fi
-
 cd /opt/kodi
 sudo /opt/quitter/oga_controls kodi-gbm rg503 &
 

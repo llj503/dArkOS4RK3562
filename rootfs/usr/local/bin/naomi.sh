@@ -10,8 +10,6 @@ elif [[ $1 == *"standalone"* ]]; then
 	echo "VAR=flycast" >/home/ark/.config/KILLIT
 sudo systemctl restart killer_daemon.service
 rm -rf "/home/ark/.local/share/flycast"
-    # 旋转交给 host SDL2/显示栈; 顺带纠正旧配置里的 Rotate90
-    sed -i -E 's/^rend\.Rotate90 *=.*/rend.Rotate90 = no/' "$HOME/.config/flycast/emu.cfg" 2>/dev/null || true
 directory=$(dirname "$2" | cut -d "/" -f2)
   [ -d "/$directory/bios/dc" ] || mkdir -p "/$directory/bios/dc"
 ln -sf "/$directory/bios/dc" "/home/ark/.local/share/flycast"

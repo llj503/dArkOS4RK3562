@@ -53,17 +53,23 @@ fi
 msg "写入 $SRC (前 $((WRITE_BYTES / 1024)) KiB) -> $DEV sector $LOADER_START"
 
 mkdir -p "$BACKUP_DIR"
-# 备份名带机型, 多台机器/多张卡的回滚文件不会混在一起
+# 备份名带机型 + CPU Serial, 多台机器/多张卡的回滚文件不会混在一起
 DEV_MODEL=""
 [ -x /usr/local/bin/console_detect ] && DEV_MODEL="$(/usr/local/bin/console_detect -b 2>/dev/null || true)"
 [ -n "$DEV_MODEL" ] || DEV_MODEL="$(tr -d '\r\n' < /boot/.console 2>/dev/null || true)"
 [ -n "$DEV_MODEL" ] || DEV_MODEL="$(uname -n)"
-BACKUP="$BACKUP_DIR/loader-backup-${DEV_MODEL}-$(date +%Y%m%d-%H%M%S).bin"
-msg "备份现有 loader 区到 $BACKUP"
-dd if="$DEV" of="$BACKUP" bs=512 skip=$LOADER_START count=$LOADER_SECTORS \
-  conv=sparse status=none || die "备份失败, 中止"
-sync
-msg "备份 sha256: $(sha256sum "$BACKUP" | cut -d' ' -f1)"
+DEV_SERIAL="$(sed -n 's/^Serial[[:space:]]*:[[:space:]]*//p' /proc/cpuinfo 2>/dev/null | head -n1 | tr -d ' \r\n')"
+BACKUP=""
+if [ "${NO_BACKUP:-0}" = "1" ]; then
+  msg "跳过备份 (NO_BACKUP=1)"
+else
+  BACKUP="$BACKUP_DIR/loader-backup-${DEV_MODEL}-${DEV_SERIAL}-$(date +%Y%m%d-%H%M%S).bin"
+  msg "备份现有 loader 区到 $BACKUP"
+  dd if="$DEV" of="$BACKUP" bs=512 skip=$LOADER_START count=$LOADER_SECTORS \
+    conv=sparse status=none || die "备份失败, 中止"
+  sync
+  msg "备份 sha256: $(sha256sum "$BACKUP" | cut -d' ' -f1)"
+fi
 
 msg "写入..."
 dd if="$SRC" of="$DEV" bs=512 seek=$LOADER_START count=$((WRITE_BYTES / 512)) \
@@ -74,10 +80,13 @@ SRC_SHA=$(dd if="$SRC" bs=512 count=$((WRITE_BYTES / 512)) status=none | sha256s
 DEV_SHA=$(dd if="$DEV" bs=512 skip=$LOADER_START count=$((WRITE_BYTES / 512)) status=none | sha256sum | cut -d' ' -f1)
 if [[ "$SRC_SHA" != "$DEV_SHA" ]]; then
   echo "✗ 回读校验失败 (写入 $SRC_SHA, 设备 $DEV_SHA)" >&2
-  echo "  恢复: sudo dd if=$BACKUP of=$DEV bs=512 seek=$LOADER_START conv=notrunc,fsync" >&2
+  [[ -n "$BACKUP" ]] && echo "  恢复: sudo dd if=$BACKUP of=$DEV bs=512 seek=$LOADER_START conv=notrunc,fsync" >&2
   exit 1
 fi
 
 msg "✓ 写入并校验成功"
 msg "  回读 sha256: $DEV_SHA"
-msg "  恢复命令: sudo dd if=$BACKUP of=$DEV bs=512 seek=$LOADER_START conv=notrunc,fsync"
+if [[ -n "$BACKUP" ]]; then
+  msg "  恢复命令: sudo dd if=$BACKUP of=$DEV bs=512 seek=$LOADER_START conv=notrunc,fsync"
+fi
+exit 0

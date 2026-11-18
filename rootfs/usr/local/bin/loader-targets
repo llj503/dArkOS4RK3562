@@ -1,0 +1,38 @@
+#!/bin/bash
+# ============================================================
+# loader-targets — 列出 eMMC 与 TF(SD) 的整盘设备节点
+#   输出两行:  "emmc <dev>"  "tf <dev>"   (没有则 dev 为空)
+#   - eMMC: /sys/block/mmcblk*/device/type == MMC
+#   - TF  : device/type == SD 的 mmcblk (掌机从 TF 启动时就是引导卡)
+#   只输出可用的整盘设备, 供 loader-version / loader-write 使用.
+# ============================================================
+emmc=""
+tf=""
+for d in /sys/block/mmcblk*; do
+  [ -e "$d" ] || continue
+  name="$(basename "$d")"
+  case "$name" in *boot*) continue ;; esac
+  type="$(cat "$d/device/type" 2>/dev/null)"
+  case "$type" in
+    MMC) [ -z "$emmc" ] && emmc="/dev/$name" ;;
+    SD)  [ -z "$tf" ] && tf="/dev/$name" ;;
+  esac
+done
+
+# 兜底: 从 /boot 所在盘推断 TF (SD 启动时 BootROM 就是从这张卡读 loader)
+if [ -z "$tf" ]; then
+  src="$(findmnt -no SOURCE /boot 2>/dev/null)"
+  [ -z "$src" ] && src="$(findmnt -no SOURCE / 2>/dev/null)"
+  if [ -n "$src" ]; then
+    base="$(basename "$src")"
+    case "$base" in
+      mmcblk*p*) base="${base%p[0-9]*}" ;;
+    esac
+    if [ -e "/sys/block/$base" ] && [ "$(cat "/sys/block/$base/device/type" 2>/dev/null)" = "SD" ]; then
+      tf="/dev/$base"
+    fi
+  fi
+fi
+
+echo "emmc $emmc"
+echo "tf $tf"

@@ -1,0 +1,58 @@
+#!/bin/bash
+# ============================================================
+# loader-write — 把内置的 RK3562 loader (DDR v1.10) 写到 eMMC 或 TF
+#   用法: loader-write <920|1560> <emmc|tf> [backup|nobackup]
+#   - TF 卡: 一律不备份 (引导卡被写坏可直接重刷镜像)
+#   - eMMC : 默认先备份 (可用 nobackup 显式跳过); 备份名带机型+Serial
+#   数据来源: /opt/darkos/loader/rk3562-loader-<freq>-v1.10.bin.xz
+#   实际写入由 write-loader-emmc.sh 完成 (回读 sha256 校验).
+#   日志: /home/ark/loader-write.log
+# ============================================================
+set -uo pipefail
+
+FREQ="${1:-}"
+KIND="${2:-}"
+MODE="${3:-}"
+LOG=/home/ark/loader-write.log
+BLOB_XZ="/opt/darkos/loader/rk3562-loader-${FREQ}-v1.10.bin.xz"
+
+die() { echo "✗ $*"; exit 1; }
+
+[[ $(id -u) -eq 0 ]] || die "需要 root"
+case "$FREQ" in 920|1560) ;; *) die "频率必须是 920 或 1560";; esac
+case "$KIND" in emmc|tf) ;; *) die "目标必须是 emmc 或 tf";; esac
+[[ -f "$BLOB_XZ" ]] || die "缺少 $BLOB_XZ"
+
+# 目标设备
+DEV="$(/usr/local/bin/loader-targets 2>/dev/null | awk -v k="$KIND" '$1==k{print $2}')"
+[[ -n "$DEV" && -b "$DEV" ]] || die "没有找到 $KIND 设备"
+case "$KIND" in
+  emmc) [[ "$(cat "/sys/block/$(basename "$DEV")/device/type" 2>/dev/null)" == "MMC" ]] || die "$DEV 不是 eMMC";;
+  tf)   [[ "$(cat "/sys/block/$(basename "$DEV")/device/type" 2>/dev/null)" == "SD"  ]] || die "$DEV 不是 TF/SD";;
+esac
+
+BLOB=/tmp/rk3562-loader-${FREQ}.bin
+if ! xz -dc "$BLOB_XZ" > "$BLOB" 2>/dev/null; then
+  rm -f "$BLOB"; die "解压失败: $BLOB_XZ"
+fi
+
+# TF 不备份; eMMC 默认备份, 除非显式 nobackup
+NO_BACKUP=0
+if [ "$KIND" = "tf" ]; then
+  NO_BACKUP=1
+elif [ "$MODE" = "nobackup" ]; then
+  NO_BACKUP=1
+fi
+
+if NO_BACKUP="$NO_BACKUP" /usr/local/bin/write-loader-emmc.sh "$BLOB" "$DEV" > "$LOG" 2>&1; then
+  rm -f "$BLOB"
+  if [ "$KIND" = "tf" ]; then
+    echo "${FREQ}MHz v1.10 loader 已写入 TF ($DEV)，重启后生效。日志: $LOG"
+  else
+    echo "${FREQ}MHz v1.10 loader 已写入 eMMC ($DEV)，重启后生效。日志: $LOG"
+  fi
+else
+  rm -f "$BLOB"
+  echo "写入失败，详见 $LOG"
+  exit 1
+fi

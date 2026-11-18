@@ -1,38 +1,43 @@
 #!/bin/bash
 # ============================================================
-# loader-restore — 用 write-loader-emmc.sh 的备份回滚 eMMC loader
-#   优先取本机型最新的 loader-backup-<机型>-*.bin, 没有就取全局最新一个;
-#   回滚前会把当前 loader 再备份一次 (同样带机型名), 写后回读 sha256 校验.
+# loader-restore — 用本机(机型+Serial)的备份回滚 eMMC loader
+#   备份名格式: loader-backup-<机型>-<Serial>-<时间>.bin
+#   只认本机机型+Serial 的备份; 没有则不恢复 (避免把别机的 loader
+#   写进来). 回滚前会把当前 loader 再备份一次 (同样带机型+Serial).
+#   --list : 只列出本机可用的备份 (每行一个完整路径), 供 ES 菜单用
+#   用法: loader-restore --list
+#         loader-restore [备份文件]         (默认取本机最新一个)
 #   日志: /home/ark/loader-restore.log
-# 用法: sudo loader-restore [备份文件] [设备, 默认 /dev/mmcblk0]
 # ============================================================
 set -uo pipefail
-
-DEV="${2:-/dev/mmcblk0}"
-LOG=/home/ark/loader-restore.log
-
-[[ $(id -u) -eq 0 ]] || { echo "需要 root"; exit 1; }
-[[ -b "$DEV" ]] || { echo "没有 eMMC ($DEV)"; exit 1; }
-[[ "$(cat "/sys/block/$(basename "$DEV")/device/type" 2>/dev/null)" == "MMC" ]] \
-  || { echo "$DEV 不是 eMMC (纯 SD 卡机器不写引导区)"; exit 1; }
 
 DEV_MODEL=""
 [ -x /usr/local/bin/console_detect ] && DEV_MODEL="$(/usr/local/bin/console_detect -b 2>/dev/null || true)"
 [ -n "$DEV_MODEL" ] || DEV_MODEL="$(tr -d '\r\n' < /boot/.console 2>/dev/null || true)"
+DEV_SERIAL="$(sed -n 's/^Serial[[:space:]]*:[[:space:]]*//p' /proc/cpuinfo 2>/dev/null | head -n1 | tr -d ' \r\n')"
+PATTERN="/home/ark/loader-backup-${DEV_MODEL}-${DEV_SERIAL}-*.bin"
+
+if [ "${1:-}" = "--list" ]; then
+  ls -1t $PATTERN 2>/dev/null
+  exit 0
+fi
+
+[[ $(id -u) -eq 0 ]] || { echo "需要 root"; exit 1; }
+LOG=/home/ark/loader-restore.log
+
+DEV="$(/usr/local/bin/loader-targets 2>/dev/null | awk '$1=="emmc"{print $2}')"
+[[ -n "$DEV" && -b "$DEV" ]] || { echo "没有 eMMC ($DEV)"; exit 1; }
+[[ "$(cat "/sys/block/$(basename "$DEV")/device/type" 2>/dev/null)" == "MMC" ]] \
+  || { echo "$DEV 不是 eMMC"; exit 1; }
 
 SRC="${1:-}"
 if [[ -z "$SRC" ]]; then
-  if [[ -n "$DEV_MODEL" ]]; then
-    SRC=$(ls -1t /home/ark/loader-backup-"$DEV_MODEL"-*.bin 2>/dev/null | head -n1)
-  fi
-  [[ -n "$SRC" ]] || SRC=$(ls -1t /home/ark/loader-backup-*.bin 2>/dev/null | head -n1)
+  SRC="$(ls -1t $PATTERN 2>/dev/null | head -n1)"
 fi
-[[ -n "$SRC" && -f "$SRC" ]] || { echo "没有可用的 loader 备份"; exit 1; }
+[[ -n "$SRC" && -f "$SRC" ]] || { echo "没有本机 ($DEV_MODEL-$DEV_SERIAL) 可用的 loader 备份"; exit 1; }
 
 if /usr/local/bin/write-loader-emmc.sh "$SRC" "$DEV" > "$LOG" 2>&1; then
-  echo "已用备份恢复 eMMC loader：$(basename "$SRC")，重启后生效。"
-  echo "日志: $LOG"
+  echo "已用备份恢复 eMMC loader：$(basename "$SRC")，重启后生效。日志: $LOG"
 else
-  echo "恢复失败，详见 $LOG"
-  exit 1
+  echo "恢复失败，详见 $LOG"; exit 1
 fi

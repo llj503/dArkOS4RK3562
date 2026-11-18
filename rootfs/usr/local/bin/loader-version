@@ -1,26 +1,34 @@
 #!/bin/bash
 # ============================================================
-# loader-version — 读 eMMC idblock 里的 Rockchip DDR loader 版本
-#   RK3562 的 BootROM 从 eMMC sector 64 读 idblock (loader.bin),
-#   文件里带 "ddr-vX.YY-<hash>" 字符串, 这里只输出版本号 (如 v1.10).
-#   只认 eMMC (device/type == MMC): 纯 SD 卡机器上 mmcblk0 就是 SD,
-#   写到那里会破坏 SD 引导, 所以这种情况直接不输出.
-#   输出: 版本号 / unknown (eMMC 在但读不到版本) / 空 (没有 eMMC)
-# 用法: sudo loader-version [设备, 默认 /dev/mmcblk0]
+# loader-version — 读某块 eMMC/SD 的 Rockchip idblock (DDR loader)
+#   输出: "<版本> <频率>"
+#     版本: v1.07 / v1.10 ...   (idblock 里 "ddr-vX.YY" 字符串)
+#     频率: 920 / 1560 / ?      (与内置 920/1560 v1.10 blob 比对得出)
+#   用法: loader-version [设备, 默认 /dev/mmcblk0]
 # ============================================================
 DEV="${1:-/dev/mmcblk0}"
+BLOB_DIR=/opt/darkos/loader
+IDB_SECTORS=1024                 # 读前 512KiB idblock 区
 
-[[ -b "$DEV" ]] || exit 0
-NAME=$(basename "$DEV")
-# 设备上不一定有 blockdev (util-linux 精简), 直接读 sysfs
-SIZE=$(cat "/sys/block/$NAME/size" 2>/dev/null || echo 0)
-(( SIZE > 0 )) || exit 0
-[[ "$(cat "/sys/block/$NAME/device/type" 2>/dev/null)" == "MMC" ]] || exit 0
+[[ -b "$DEV" ]] || { echo "unknown ?"; exit 0; }
 
-VER=$(dd if="$DEV" bs=512 skip=64 count=16320 status=none 2>/dev/null \
-  | tr -d '\0' \
-  | grep -ao 'ddr-v[0-9][0-9.]*' \
-  | head -n1 \
-  | sed 's/^ddr-//')
+TMP="$(mktemp /tmp/ldrver.XXXXXX)" || exit 0
+trap 'rm -f "$TMP" /tmp/ldrref_*.bin' EXIT
+dd if="$DEV" of="$TMP" bs=512 skip=64 count=$IDB_SECTORS status=none 2>/dev/null || { echo "unknown ?"; exit 0; }
 
-echo "${VER:-unknown}"
+# 只认 RKNS idblock, 否则等于没 loader
+[[ "$(head -c4 "$TMP")" == "RKNS" ]] || { echo "unknown ?"; exit 0; }
+
+VER="$(tr -d '\0' < "$TMP" | grep -ao 'ddr-v[0-9][0-9.]*' | head -n1 | sed 's/^ddr-//')"
+
+FREQ="?"
+for f in 920 1560; do
+  xz -dc "$BLOB_DIR/rk3562-loader-$f-v1.10.bin.xz" > "/tmp/ldrref_$f.bin" 2>/dev/null || continue
+  SZ=$(stat -c %s "/tmp/ldrref_$f.bin" 2>/dev/null || echo 0)
+  if [ "$SZ" -gt 0 ] && cmp -s -n "$SZ" "/tmp/ldrref_$f.bin" "$TMP"; then
+    FREQ="$f"
+    break
+  fi
+done
+
+echo "${VER:-unknown} $FREQ"
