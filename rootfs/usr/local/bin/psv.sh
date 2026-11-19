@@ -8,8 +8,7 @@
 #
 #   psv.sh [rom]
 #     rom  .vpk/.zip/folder to install and run, an installed TITLEID.
-#          Empty opens the OSD settings panel: there is no Qt GUI and no
-#          grid frontend, the OSD is the only Vita3K UI.
+#          Empty opens the OSD settings panel.
 #
 # Installed as /usr/local/bin/psv.sh (dArkOS launcher naming); bundle in /opt/vita3k
 # and all Vita data (firmware, installed games, config, cache) in /roms/psvita/Vita3k.
@@ -182,11 +181,6 @@ export XDG_RUNTIME_DIR="$RTDIR"
 # compositor's debug protocol to every client.
 WESTON_EXTRA=()
 [ "${PSVITA_WESTON_DEBUG:-0}" = "1" ] && WESTON_EXTRA+=(--debug)
-# A portrait DSI panel must be presented landscape to Wayland clients. The
-# rotation is whatever console_detect reports for this board; it
-# is mapped to a Weston output transform at runtime and handed over as a
-# private config, so nothing is written into /etc and no model is hardcoded.
-# fbcon=rotate:1 (detected 90) needs rotate-270: Weston turns the opposite way.
 V3K_GEOM=$(/usr/local/bin/console_detect -s 2>/dev/null || true)
 if [ -n "$V3K_GEOM" ]; then
     eval "$V3K_GEOM"
@@ -199,9 +193,6 @@ case "${SCREEN_ROTATION:-0}" in
     180) V3K_TFORM=rotate-180 ;;
     270) V3K_TFORM=rotate-90 ;;
 esac
-# The [output] section needs the real connector name (an unnamed section is
-# ignored by weston 14). Take it from the DRM connector that is actually
-# connected instead of assuming DSI-1.
 V3K_OUTPUT=""
 for _s in /sys/class/drm/card*-*/status; do
     [ -r "$_s" ] || continue
@@ -396,9 +387,6 @@ firmware_ok() {
     [ -d "$DATA/fs/sa0" ] && [ -n "$(ls -A "$DATA/fs/sa0" 2>/dev/null)" ]
 }
 
-# console_detect is the single source of truth for per-device geometry
-# (first law: never hardcode resolution / rotation). The OSD lays itself out
-# from OSD_W/OSD_H, so any panel size works without touching this script.
 screen_geometry() {
     local out=""
     if [ -x /usr/local/bin/console_detect ]; then
@@ -409,16 +397,11 @@ screen_geometry() {
     else
         echo "psvita: console_detect missing, OSD uses its built-in fallback" >&2
     fi
-    # Deliberately no numeric fallback: if console_detect cannot answer, leave
-    # these empty and vita3k-osd probes the binary itself for the panel size.
     OSD_W=${SCREEN_WIDTH:-}
     OSD_H=${SCREEN_HEIGHT:-}
     if [ -z "$OSD_W" ] || [ -z "$OSD_H" ]; then
         echo "psvita: console_detect gave no geometry, OSD will probe it" >&2
     fi
-    # Menu hotkey: HOTKEY_TYPE comes from the same console_detect -s answer,
-    # mapped here to the evdev code vita3k-pad.py listens for. X (307) is the
-    # second half of the combo. No config file, no wrapper script.
     case "${HOTKEY_TYPE:-}" in
         select) V3K_HOTKEY=314 ;;
         mode)   V3K_HOTKEY=316 ;;
@@ -450,8 +433,6 @@ setup_panel() {
     fi
 }
 
-# Shared by the firmware gate and the no-ROM entry: show the OSD, act on its
-# .osd-action, repeat until it asks to launch/quit or both components exist.
 run_setup_loop() {
     local mode="${1:---setup}"
     local _tag _kind _path _tid
@@ -515,9 +496,6 @@ if [ -n "$ROM" ] && ! firmware_ok && [ -x "$VITABIN/vita3k-osd" ]; then
     run_setup_loop --setup
 fi
 
-# No ROM: the OSD is the only Vita3K UI. There is no Qt GUI and no grid
-# frontend, so an empty launch opens the settings panel and every future
-# feature belongs there. The EXIT trap still owns the session lifetime.
 if [ -z "$ROM" ]; then
     if [ -x "$VITABIN/vita3k-osd" ]; then
         echo "psvita: opening OSD settings" >&2

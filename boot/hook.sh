@@ -491,9 +491,6 @@ apply_fc_cache() {
   fi
 }
 
-# Vita3K 的热键与屏幕几何都不在这里分发: psv.sh 启动时直接问
-# console_detect -s, 再把结果交给 vita3k-pad.py / vita3k-osd。
-# 也不再向数据目录写任何状态文件, 不设机型分支。
 
 # RetroArch udev 手柄的轴编号按"已存在的 ABS 轴"压缩, 不是 evdev 的 ABS 码:
 #   rg52mini/rg43h/rg43v/ais/xf55h 有模拟扳机 (ABS_Z/ABS_RZ), 轴序为
@@ -646,7 +643,6 @@ main() {
   # module 参数每次开机都回到默认, 该服务本来就在开机时启动并常驻).
   # gptokeyb (onscripter 的菜单导航) 需要写 uinput
   chmod 666 /dev/uinput 2>/dev/null || true
-  # Vita3K 的热键/屏幕几何由 psv.sh 启动时现问 console_detect, 此处无兜底。
   load_wifi_modules
   # 清 RK817 POWER_EN_SAVE0/1，避免关机时 reboot-notifier 把 POWER_EN
   # 恢复回去导致关机后自启；与 ROCKNIX 的 not-save-power-en 等价.

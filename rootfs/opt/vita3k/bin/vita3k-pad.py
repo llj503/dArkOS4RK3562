@@ -100,12 +100,6 @@ FRONTEND_ACTIVE = "/roms/psvita/Vita3k/.frontend-active"
 
 
 def menu_combo():
-    """hotkey + X opens the quick-settings panel.
-
-    psv.sh resolves HOTKEY_TYPE from console_detect -s and exports the evdev
-    code as V3K_HOTKEY, so this process reads no per-device config file and
-    never guesses the model itself.
-    """
     try:
         hotkey = int(os.environ.get("V3K_HOTKEY", "316"))
     except ValueError:
