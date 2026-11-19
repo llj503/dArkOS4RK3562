@@ -1,0 +1,72 @@
+#!/bin/bash
+
+directory=$(dirname "$2" | cut -d "/" -f2)
+
+if [[ ! -d "/$directory/psp/ppsspp" ]]; then
+    cp -rf /opt/ppsspp/backupforromsfolder/ppsspp /$directory/psp
+fi
+
+rm /home/ark/.config/ppsspp
+
+ln -sf /$directory/psp/ppsspp/ /home/ark/.config/
+
+if  [[ $1 == "standalone" ]]; then
+  if  [[ ! -d "/$directory/psp/ppsspp" ]]; then
+    cp -rf /opt/ppsspp/backupforromsfolder/ppsspp /$directory/psp
+  fi
+  if  [[ ! -f "/$directory/psp/ppsspp/PSP/SYSTEM/controls.ini" ]]; then
+    cp -rf /opt/ppsspp/backupforromsfolder/ppsspp/PSP/SYSTEM/controls.ini /$directory/psp/ppsspp/PSP/SYSTEM/controls.ini
+  fi
+  if  [[ ! -f "/$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl" ]]; then
+    cp -rf /opt/ppsspp/backupforromsfolder/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl
+  fi
+  echo "VAR=PPSSPPSDL" > /home/ark/.config/KILLIT
+  sudo systemctl restart killer_daemon.service
+  # PPSSPP tracks instance count via shm at /dev/shm/PPSSPP_ID and refuses to
+  # save its config when not the first instance.  killer_daemon's SIGTERM kills
+  # PPSSPP before its destructor can unlink the shm, so the next launch sees a
+  # stale counter and silently drops all settings changes.  Wipe it pre-launch.
+  sudo rm -f /dev/shm/PPSSPP_ID
+  cp -f /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini
+  /opt/ppsspp/PPSSPPSDL --xres 1280 --yres 720 "$2"
+  cp -f /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl
+  sudo systemctl stop killer_daemon.service
+elif [[ $1 == "standalone-2021" ]]; then
+  if  [[ ! -d "/$directory/psp/ppsspp" ]]; then
+    cp -rf /opt/ppsspp/backupforromsfolder/ppsspp /$directory/psp
+  fi
+  if  [[ ! -f "/$directory/psp/ppsspp/PSP/SYSTEM/controls.ini" ]]; then
+    cp -rf /opt/ppsspp/backupforromsfolder/ppsspp/PSP/SYSTEM/controls.ini /$directory/psp/ppsspp/PSP/SYSTEM/controls.ini
+  fi
+  if  [[ ! -f "/$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl" ]]; then
+    cp -rf /opt/ppsspp/backupforromsfolder/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl
+  fi
+  export SDL_AUDIODRIVER=alsa
+  echo "VAR=PPSSPPSDL" > /home/ark/.config/KILLIT
+  sudo systemctl restart killer_daemon.service
+  sudo rm -f /dev/shm/PPSSPP_ID
+  cp -f /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini
+  /opt/ppsspp-2021/PPSSPPSDL --fullscreen "$2"
+  cp -f /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl
+  sudo systemctl stop killer_daemon.service
+  unset SDL_AUDIODRIVER
+else
+  if [[ ! -d "/$directory/psp/PSP" ]]; then
+    mkdir /$directory/psp/PSP
+  fi
+  if [[ ! -d "/$directory/psp/PSP/SAVEDATA" ]]; then
+    mkdir /$directory/psp/PSP/SAVEDATA
+  fi
+  if [[ ! -d "/$directory/psp/SAVEDATA" ]]; then
+    mkdir /$directory/psp/SAVEDATA
+  fi
+  /usr/local/bin/watchpsp.sh $directory &
+  /usr/local/bin/retroarch -L /home/ark/.config/retroarch/cores/ppsspp_libretro.so "$2"
+  sudo kill -9 $(pidof watchpsp.sh)
+fi
+
+# Restore RK817 codec state after emulator exit — PPSSPP can leave the
+# audio path in a bad state.  Playback Path=HP is required for the external
+# speaker amplifier, Resume Path=ON ensures the codec restores after sleep.
+amixer -q sset 'Playback Path' HP 2>/dev/null
+amixer -q sset 'Resume Path' ON 2>/dev/null

@@ -308,19 +308,6 @@ apply_private_chinese() {
   msg "Private Chinese package installed: $stamp"
 }
 
-apply_joy_conf() {
-  msg "apply_joy_conf: JOYSTICK_COUNT=$JOYSTICK_COUNT"
-  local joy_type="none"
-  [[ "$JOYSTICK_COUNT" == "2" ]] && joy_type="dual"
-  for roms_dir in "/roms/psp" "/roms2/psp" "/opt/ppsspp/backupforromsfolder"; do
-    [[ -d "$roms_dir" ]] || continue
-    local target="$roms_dir/ppsspp/PSP/SYSTEM"
-    cp_if_exists "$QUIRKS_DIR/${joy_type}Joy/controls.ini"   "$target/controls.ini" "yes" || true
-    cp_if_exists "$QUIRKS_DIR/${joy_type}Joy/ppsspp.ini"     "$target/ppsspp.ini"   "yes" || true
-    cp_if_exists "$QUIRKS_DIR/${joy_type}Joy/ppsspp.ini.sdl" "$target/ppsspp.ini.sdl" "yes" || true
-  done
-}
-
 apply_es_setting() {
   msg "apply_es_setting"
   local target="/home/ark/.emulationstation/es_settings.cfg"
@@ -432,7 +419,6 @@ apply_all_quirks() {
   [[ -d "$QUIRKS_DIR" ]] || { warn "QUIRKS_DIR missing: $QUIRKS_DIR"; return 0; }
   apply_input
   apply_es_setting
-  apply_joy_conf
   apply_sdl_rotation "$SCREEN_ROTATION"
   if [[ -f /boot/.cn ]]; then
     apply_localization cn
