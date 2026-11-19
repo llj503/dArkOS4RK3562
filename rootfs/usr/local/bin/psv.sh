@@ -1,32 +1,25 @@
 #!/bin/bash
 # PS Vita (Vita3K-Plus) entry for dArkOS EmulationStation.
 #
-# dArkOS has no X/Wayland session and ES owns DRM master, so the Qt frontend
-# gets a compositor of its own:
+# dArkOS has no X/Wayland session and ES owns DRM master, so Vita3K gets a
+# compositor of its own:
 #   leave the ES cgroup -> stop ES -> Weston (DRM, root) -> Vita3K (ark)
 #   -> stop Weston -> start ES
 #
 #   psv.sh [rom]
-#     rom  .vpk/.zip/folder to install and run, an installed TITLEID, or empty
-#          for the Vita3K GUI (firmware install, settings, app list).
+#     rom  .vpk/.zip/folder to install and run, an installed TITLEID.
+#          Empty opens the OSD settings panel: there is no Qt GUI and no
+#          grid frontend, the OSD is the only Vita3K UI.
 #
 # Installed as /usr/local/bin/psv.sh (dArkOS launcher naming); bundle in /opt/vita3k
 # and all Vita data (firmware, installed games, config, cache) in /roms/psvita/Vita3k.
 set -u
 
-# Ports -> "Vita3K 高级设置" passes --native-gui; a plain no-ROM launch shows
-# the handheld grid frontend. This script re-execs itself as a transient root
-# service, so the choice must travel through an environment variable.
 ROM="${1:-}"
-NATIVE_GUI=${PSVITA_NATIVE_GUI:-0}
-if [ "$ROM" = "--native-gui" ]; then
-    NATIVE_GUI=1
-    ROM=""
-fi
 
 # ES "option cards": plain .sh entries in /roms/psvita are settings, not Vita3K
 # content. Run them directly in ES's own process instead of starting Weston.
-# Game zip/vpk and the empty-ROM GUI still go through the systemd session below.
+# Game zip/vpk and the empty-ROM OSD still go through the systemd session below.
 case "$ROM" in
     *.sh|*.SH) exec bash "$ROM" ;;
 esac
@@ -46,7 +39,6 @@ if [ "${PSVITA_SESSION:-}" != "1" ]; then
     sudo systemctl reset-failed psvita-session.service 2>/dev/null || true
     exec sudo systemd-run --unit=psvita-session --collect \
         --setenv=PSVITA_SESSION=1 \
-        --setenv=PSVITA_NATIVE_GUI="$NATIVE_GUI" \
         --setenv=PSVITA_WESTON_DEBUG="${PSVITA_WESTON_DEBUG:-0}" \
         --working-directory=/home/ark \
         /usr/local/bin/psv.sh "$ROM"
@@ -156,6 +148,12 @@ systemctl stop emulationstation
 # Let ES drop DRM master before Weston asks for it.
 sleep 2
 [ -r "$BL_SYS" ] && BL_SAVED=$(cat "$BL_SYS")
+# A stored 0 means a previous session left the panel blank (crash/cleanup
+# ordering). Restoring "off" then looks exactly like a dead device, so fall
+# back to a sane level instead. A real low brightness set by the user is kept.
+if [ -z "$BL_SAVED" ] || ! [ "$BL_SAVED" -gt 0 ] 2>/dev/null; then
+    BL_SAVED=200
+fi
 set_governors
 
 # Follow the ES language, same detection as dArkOS4RK3562's flycast/ps2
@@ -179,67 +177,56 @@ chown ark:ark "$RTDIR" 2>/dev/null || true
 chmod 0700 "$RTDIR" 2>/dev/null || true
 
 export XDG_RUNTIME_DIR="$RTDIR"
-
-# ---- compositor geometry -------------------------------------------------
-# 屏幕几何属机型差异: 唯一来源是 console_detect, hook.sh 已写进 .screen, 没写就现问.
-# kiosk-shell 强制全屏, xdg-shell 又拒绝比全屏更大的窗口几何, 而 vita3k-osd 默认
-# 1024x768 -- 不导出 OSD_W/OSD_H 就会被合成器杀掉(黑屏无菜单). pad.py 及其拉起的
-# 游戏内 OSD 是子进程, 继承同一份环境.
-SCREEN_CFG="$DATA/.screen"
-_SCREEN_W=
-_SCREEN_H=
-_SCREEN_ROT=0
-if [ -r "$SCREEN_CFG" ]; then
-    read -r _SCREEN_W _SCREEN_H _SCREEN_ROT < "$SCREEN_CFG" || true
-fi
-if [ -z "$_SCREEN_W" ] || [ -z "$_SCREEN_H" ]; then
-    eval "$(/usr/local/bin/console_detect -s 2>/dev/null | tr -d '\r')" || true
-    _SCREEN_W=${SCREEN_WIDTH:-}
-    _SCREEN_H=${SCREEN_HEIGHT:-}
-    _SCREEN_ROT=${SCREEN_ROTATION:-0}
-fi
-case "$_SCREEN_W" in
-    [0-9]*) export OSD_W="$_SCREEN_W" OSD_H="$_SCREEN_H" ;;
-esac
-
-# weston 的 transform 方向与 console_detect 的角度相反: 报 90 度要 rotate-270.
-case "$_SCREEN_ROT" in
-    90)  _TRANSFORM=rotate-270 ;;
-    270) _TRANSFORM=rotate-90 ;;
-    180) _TRANSFORM=rotate-180 ;;
-    *)   _TRANSFORM=normal ;;
-esac
-# [output] 必须带 name=, 无名段 weston 14 不应用 transform; console_detect 不报 DRM
-# 连接器名, 这里问的是运行时拓扑(内屏 DSI 优先), 不是机型常量.
-_OUTPUT=
-for _s in /sys/class/drm/card*-*/status; do
-    [ "$(cat "$_s" 2>/dev/null)" = "connected" ] || continue
-    _n=${_s#/sys/class/drm/card*-}
-    _n=${_n%/status}
-    case "$_n" in Writeback*|Virtual*|"") continue ;; esac
-    [ -n "$_OUTPUT" ] || _OUTPUT=$_n
-    case "$_n" in DSI*) _OUTPUT=$_n; break ;; esac
-done
-# --config 显式指定: /root/.config 或 /etc/xdg 的残留副本会抢 weston 的搜索顺序.
-WESTON_INI="$DATA/weston.ini"
-export WESTON_INI
-{
-    printf '[output]\n'
-    [ -n "$_OUTPUT" ] && printf 'name=%s\n' "$_OUTPUT"
-    printf 'transform=%s\n' "$_TRANSFORM"
-} > "$WESTON_INI" 2>/dev/null || true
-
 # PSVITA_WESTON_DEBUG=1 adds --debug, which is what authorises the
 # weston-screenshooter / weston-debug protocols. Off by default: it exposes the
 # compositor's debug protocol to every client.
 WESTON_EXTRA=()
 [ "${PSVITA_WESTON_DEBUG:-0}" = "1" ] && WESTON_EXTRA+=(--debug)
-[ -s "$WESTON_INI" ] && WESTON_EXTRA+=(--config="$WESTON_INI")
+# A portrait DSI panel must be presented landscape to Wayland clients. The
+# rotation is whatever console_detect reports for this board; it
+# is mapped to a Weston output transform at runtime and handed over as a
+# private config, so nothing is written into /etc and no model is hardcoded.
+# fbcon=rotate:1 (detected 90) needs rotate-270: Weston turns the opposite way.
+V3K_GEOM=$(/usr/local/bin/console_detect -s 2>/dev/null || true)
+if [ -n "$V3K_GEOM" ]; then
+    eval "$V3K_GEOM"
+else
+    echo "psvita: console_detect missing, weston keeps the panel orientation" >&2
+fi
+V3K_TFORM=normal
+case "${SCREEN_ROTATION:-0}" in
+    90)  V3K_TFORM=rotate-270 ;;
+    180) V3K_TFORM=rotate-180 ;;
+    270) V3K_TFORM=rotate-90 ;;
+esac
+# The [output] section needs the real connector name (an unnamed section is
+# ignored by weston 14). Take it from the DRM connector that is actually
+# connected instead of assuming DSI-1.
+V3K_OUTPUT=""
+for _s in /sys/class/drm/card*-*/status; do
+    [ -r "$_s" ] || continue
+    [ "$(cat "$_s" 2>/dev/null)" = "connected" ] || continue
+    case "$_s" in
+        *-DSI-*)
+            V3K_OUTPUT=$(basename "$(dirname "$_s")")
+            V3K_OUTPUT=${V3K_OUTPUT#card*-}
+            break
+            ;;
+    esac
+done
+[ -n "$V3K_OUTPUT" ] || V3K_OUTPUT=DSI-1
+mkdir -p "$RTDIR/xdg/weston"
+printf '[output]\nname=%s\ntransform=%s\n' "$V3K_OUTPUT" "$V3K_TFORM" | \
+    tee "$RTDIR/xdg/weston.ini" "$RTDIR/xdg/weston/weston.ini" >/dev/null
+chmod 0644 "$RTDIR/xdg/weston.ini" "$RTDIR/xdg/weston/weston.ini" 2>/dev/null || true
+echo "psvita: weston transform=$V3K_TFORM (rotation ${SCREEN_ROTATION:-0})" >&2
+
 # Weston lives in the app bundle; only its two module directories are
 # reachable from /usr (symlinks into $WESTON_HOME/lib), because weston resolves
 # backends and shells at the compiled-in paths. libseat is not in the base
 # image, so it ships next to libweston and is found via LD_LIBRARY_PATH.
 LD_LIBRARY_PATH="$WESTON_HOME/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+    XDG_CONFIG_HOME="$RTDIR/xdg" \
     "$WESTON_HOME/bin/weston" --backend=drm-backend.so --shell=kiosk-shell.so --idle-time=0 \
     "${WESTON_EXTRA[@]}" \
     --socket="$SOCK" --log="$DATA/weston.log" >"$DATA/weston.out" 2>&1 &
@@ -409,7 +396,40 @@ firmware_ok() {
     [ -d "$DATA/fs/sa0" ] && [ -n "$(ls -A "$DATA/fs/sa0" 2>/dev/null)" ]
 }
 
+# console_detect is the single source of truth for per-device geometry
+# (first law: never hardcode resolution / rotation). The OSD lays itself out
+# from OSD_W/OSD_H, so any panel size works without touching this script.
+screen_geometry() {
+    local out=""
+    if [ -x /usr/local/bin/console_detect ]; then
+        out=$(/usr/local/bin/console_detect -s 2>/dev/null || true)
+    fi
+    if [ -n "$out" ]; then
+        eval "$out"
+    else
+        echo "psvita: console_detect missing, OSD uses its built-in fallback" >&2
+    fi
+    # Deliberately no numeric fallback: if console_detect cannot answer, leave
+    # these empty and vita3k-osd probes the binary itself for the panel size.
+    OSD_W=${SCREEN_WIDTH:-}
+    OSD_H=${SCREEN_HEIGHT:-}
+    if [ -z "$OSD_W" ] || [ -z "$OSD_H" ]; then
+        echo "psvita: console_detect gave no geometry, OSD will probe it" >&2
+    fi
+    # Menu hotkey: HOTKEY_TYPE comes from the same console_detect -s answer,
+    # mapped here to the evdev code vita3k-pad.py listens for. X (307) is the
+    # second half of the combo. No config file, no wrapper script.
+    case "${HOTKEY_TYPE:-}" in
+        select) V3K_HOTKEY=314 ;;
+        mode)   V3K_HOTKEY=316 ;;
+        happy5) V3K_HOTKEY=708 ;;
+        *)      V3K_HOTKEY=316 ;;
+    esac
+    export OSD_W OSD_H V3K_HOTKEY
+}
+
 setup_panel() {
+    local mode="${1:---setup}"
     rm -f "$DATA/.osd-action" "$DATA/.osd-pending" "$DATA/.osd-active"
     # Keep the pad mapper completely out of the way while setup owns the screen.
     touch "$DATA/.frontend-active"
@@ -419,7 +439,8 @@ setup_panel() {
     env -u LD_PRELOAD -u LD_LIBRARY_PATH \
         -u VK_ADD_IMPLICIT_LAYER_PATH -u QT_QPA_PLATFORM -u QT_PLUGIN_PATH \
         HOME=/home/ark XDG_RUNTIME_DIR="$RTDIR" WAYLAND_DISPLAY="$SOCK" \
-        "$VITABIN/vita3k-osd" --setup
+        OSD_W="$OSD_W" OSD_H="$OSD_H" \
+        "$VITABIN/vita3k-osd" "$mode"
     rm -f "$DATA/.frontend-active"
     ACTION=$(head -1 "$DATA/.osd-action" 2>/dev/null)
     rm -f "$DATA/.osd-action"
@@ -429,43 +450,79 @@ setup_panel() {
     fi
 }
 
-if [ -n "$ROM" ] && ! firmware_ok && [ -x "$VITABIN/vita3k-osd" ]; then
-    echo "psvita: firmware/font missing -> quick settings setup" >&2
+# Shared by the firmware gate and the no-ROM entry: show the OSD, act on its
+# .osd-action, repeat until it asks to launch/quit or both components exist.
+run_setup_loop() {
+    local mode="${1:---setup}"
+    local _tag _kind _path _tid
     for _ in $(seq 1 10); do
         ACTION=
-        setup_panel
+        setup_panel "$mode"
         case "${ACTION:-}" in
             install*)
                 IFS=$'\t' read -r _tag _kind _path <<< "$ACTION"
                 if [ -n "$_path" ] && [ -f "$_path" ]; then
-                    echo "psvita: installing $_kind from $_path" >&2
-                    runuser -u ark -- env -u LD_PRELOAD -u LD_LIBRARY_PATH \
-                        -u VK_ADD_IMPLICIT_LAYER_PATH \
-                        HOME=/home/ark XDG_RUNTIME_DIR="$RTDIR" \
-                        QT_QPA_PLATFORM=offscreen SDL_VIDEODRIVER=offscreen \
-                        "$BUNDLE/vita3k.sh" --firmware "$_path" \
-                        >>"$DATA/firmware-install.log" 2>&1 || true
+                    if [ "$_kind" = "game" ]; then
+                        echo "psvita: installing game $_path" >&2
+                        runuser -u ark -- env -u LD_PRELOAD -u LD_LIBRARY_PATH \
+                            -u VK_ADD_IMPLICIT_LAYER_PATH \
+                            HOME=/home/ark XDG_RUNTIME_DIR="$RTDIR" \
+                            QT_QPA_PLATFORM=offscreen SDL_VIDEODRIVER=offscreen \
+                            "$BUNDLE/vita3k.sh" -F -- "$_path" \
+                            >>"$DATA/game-install.log" 2>&1 || true
+                    else
+                        echo "psvita: installing $_kind from $_path" >&2
+                        runuser -u ark -- env -u LD_PRELOAD -u LD_LIBRARY_PATH \
+                            -u VK_ADD_IMPLICIT_LAYER_PATH \
+                            HOME=/home/ark XDG_RUNTIME_DIR="$RTDIR" \
+                            QT_QPA_PLATFORM=offscreen SDL_VIDEODRIVER=offscreen \
+                            "$BUNDLE/vita3k.sh" --firmware "$_path" \
+                            >>"$DATA/firmware-install.log" 2>&1 || true
+                    fi
                 fi
                 # Both components present -> go straight into the game.
-                firmware_ok && break
+                [ "$_kind" != "game" ] && firmware_ok && return 0
                 ;;
-            launch*) break ;;
+            delgame*)
+                IFS=$'\t' read -r _tag _tid <<< "$ACTION"
+                case "${_tid:-}" in
+                    ''|*/*|.|..) ;;   # refuse empty / path traversal
+                    *) echo "psvita: deleting game $_tid" >&2
+                       rm -rf "${DATA:?}/fs/ux0/app/$_tid" ;;
+                esac
+                ;;
+            delsave*)
+                IFS=$'\t' read -r _tag _tid <<< "$ACTION"
+                case "${_tid:-}" in
+                    ''|*/*|.|..) ;;
+                    *) echo "psvita: deleting save $_tid" >&2
+                       rm -rf "${DATA:?}/fs/ux0/user/00/savedata/$_tid"
+                       rm -rf "${DATA:?}/fs/ux0/savedata/$_tid" ;;
+                esac
+                ;;
+            launch*) return 0 ;;
             quit*)   exit 0 ;;
             *)       ;;   # settings applied / file browser cancelled: show again
         esac
     done
+    return 0
+}
+
+screen_geometry
+
+if [ -n "$ROM" ] && ! firmware_ok && [ -x "$VITABIN/vita3k-osd" ]; then
+    echo "psvita: firmware/font missing -> OSD setup" >&2
+    run_setup_loop --setup
 fi
 
-# No ROM + not explicitly asking for the Qt GUI: run the handheld frontend.
-# It inherits this session's environment and execs Vita3K itself when the user
-# picks a game, so the EXIT trap above still owns the whole session lifetime.
-if [ -z "$ROM" ] && [ "$NATIVE_GUI" -eq 0 ] && [ -x "$VITABIN/vita3k-frontend" ]; then
-    echo "psvita: starting handheld frontend" >&2
-    rm -f "$DATA/.frontend-active"
-    runuser -u ark -- env \
-        HOME=/home/ark USER=ark LOGNAME=ark \
-        XDG_RUNTIME_DIR="$RTDIR" WAYLAND_DISPLAY="$SOCK" \
-        "$VITABIN/vita3k-frontend"
+# No ROM: the OSD is the only Vita3K UI. There is no Qt GUI and no grid
+# frontend, so an empty launch opens the settings panel and every future
+# feature belongs there. The EXIT trap still owns the session lifetime.
+if [ -z "$ROM" ]; then
+    if [ -x "$VITABIN/vita3k-osd" ]; then
+        echo "psvita: opening OSD settings" >&2
+        run_setup_loop --settings
+    fi
     exit 0
 fi
 

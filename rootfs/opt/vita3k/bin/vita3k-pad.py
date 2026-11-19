@@ -99,32 +99,18 @@ OSD_BIN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vita3k-osd")
 FRONTEND_ACTIVE = "/roms/psvita/Vita3k/.frontend-active"
 
 
-MENU_COMBO_FILE = "/roms/psvita/Vita3k/.menu-combo"
-
-
 def menu_combo():
     """hotkey + X opens the quick-settings panel.
 
-    hook.sh writes .menu-combo on first boot / device change from
-    console_detect's HOTKEY_TYPE; no per-game console_detect call.
+    psv.sh resolves HOTKEY_TYPE from console_detect -s and exports the evdev
+    code as V3K_HOTKEY, so this process reads no per-device config file and
+    never guesses the model itself.
     """
-    hotkey, button = 316, 307
     try:
-        for line in open(MENU_COMBO_FILE):
-            k, _, v = line.strip().partition("=")
-            if k == "HOTKEY":
-                hotkey = int(v)
-            elif k == "BUTTON":
-                button = int(v)
-        return hotkey, button
-    except Exception:
-        pass
-    try:
-        kind = subprocess.run(["console-detect", "-t"], capture_output=True,
-                              text=True, timeout=5).stdout.strip()
-    except Exception:
-        kind = ""
-    return (314 if kind == "select" else 316), button
+        hotkey = int(os.environ.get("V3K_HOTKEY", "316"))
+    except ValueError:
+        hotkey = 316
+    return hotkey, 307
 
 UI_SET_EVBIT = 0x40045564
 UI_SET_KEYBIT = 0x40045565
@@ -311,7 +297,7 @@ def main():
     session_is_gui = (mode == "gui")  # Ports GUI (no -r); no game was ever booted
     pointer_enabled = False           # GUI uses arrow keys + A/B by default
     last_state_check = 0.0
-    print(f"vita3k-pad: mode={mode} menu={osd_hotkey}+{menu_button} (hook.sh), "
+    print(f"vita3k-pad: mode={mode} menu={osd_hotkey}+{menu_button} (console_detect), "
           f"keyboard nav; Select+R3 = pointer; journal auto-sync", flush=True)
 
     def pointer_tick():

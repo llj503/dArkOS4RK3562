@@ -425,8 +425,6 @@ apply_all_quirks() {
   apply_es_setting
   apply_joy_conf
   apply_sdl_rotation "$SCREEN_ROTATION"
-  apply_vita3k_hotkeys
-  apply_vita3k_screen
   if [[ -f /boot/.cn ]]; then
     apply_localization cn
     apply_tools_gamelist cn
@@ -493,40 +491,9 @@ apply_fc_cache() {
   fi
 }
 
-# Vita3K-Plus: quick-settings menu = console_detect hotkey + X (evdev 307).
-# Written on first boot / device change via apply_all_quirks, plus a
-# missing-file fallback on every boot; psv.sh / vita3k-pad.py only read it.
-apply_vita3k_hotkeys() {
-  local hk d f
-  case "$HOTKEY_TYPE" in
-    select) hk=314 ;;
-    mode)   hk=316 ;;
-    *)      hk=316 ;;
-  esac
-  for d in /roms /roms2; do
-    [ -d "$d" ] || continue
-    f="$d/psvita/Vita3k"
-    mkdir -p "$f" 2>/dev/null || continue
-    printf '%s\n' "$HOTKEY_TYPE" > "$f/.hotkey-type"
-    printf 'HOTKEY=%s\nBUTTON=307\n' "$hk" > "$f/.menu-combo"
-    chown 1000:1000 "$f/.hotkey-type" "$f/.menu-combo" 2>/dev/null || true
-  done
-  msg "Vita3K menu: hotkey($HOTKEY_TYPE)=$hk + X=307"
-}
-
-# Vita3K-Plus: 屏幕几何同为设备差异, 由 console-detect 判定后分发, 不写死机型.
-# psv.sh 消费它来决定 OSD 尺寸和 weston 的 output transform, 详见那里的说明.
-apply_vita3k_screen() {
-  local d f
-  for d in /roms /roms2; do
-    [ -d "$d" ] || continue
-    f="$d/psvita/Vita3k"
-    mkdir -p "$f" 2>/dev/null || continue
-    printf '%s %s %s\n' "$SCREEN_WIDTH" "$SCREEN_HEIGHT" "$SCREEN_ROTATION" > "$f/.screen"
-    chown 1000:1000 "$f/.screen" 2>/dev/null || true
-  done
-  msg "Vita3K screen: ${SCREEN_WIDTH}x${SCREEN_HEIGHT} rot=$SCREEN_ROTATION"
-}
+# Vita3K 的热键与屏幕几何都不在这里分发: psv.sh 启动时直接问
+# console_detect -s, 再把结果交给 vita3k-pad.py / vita3k-osd。
+# 不写 .menu-combo / .hotkey-type / .screen, 也不设机型分支。
 
 # RetroArch udev 手柄的轴编号按"已存在的 ABS 轴"压缩, 不是 evdev 的 ABS 码:
 #   rg52mini/rg43h/rg43v/ais/xf55h 有模拟扳机 (ABS_Z/ABS_RZ), 轴序为
@@ -679,8 +646,7 @@ main() {
   # module 参数每次开机都回到默认, 该服务本来就在开机时启动并常驻).
   # gptokeyb (onscripter 的菜单导航) 需要写 uinput
   chmod 666 /dev/uinput 2>/dev/null || true
-  [ -f /roms/psvita/Vita3k/.menu-combo ] || apply_vita3k_hotkeys
-  [ -f /roms/psvita/Vita3k/.screen ] || apply_vita3k_screen
+  # Vita3K 的热键/屏幕几何由 psv.sh 启动时现问 console_detect, 此处无兜底。
   load_wifi_modules
   # 清 RK817 POWER_EN_SAVE0/1，避免关机时 reboot-notifier 把 POWER_EN
   # 恢复回去导致关机后自启；与 ROCKNIX 的 not-save-power-en 等价.
