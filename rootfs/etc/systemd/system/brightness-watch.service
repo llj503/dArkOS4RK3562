@@ -1,5 +1,5 @@
 [Unit]
-Description=Persist backlight brightness (ES only writes sysfs)
+Description=Persist display brightness, colortemp and volume
 After=multi-user.target
 
 [Service]

@@ -9,14 +9,36 @@
 #   * 色温/gamma: /home/ark/.config/colortemp.conf 由 colortemp 保存, 这里
 #     写 rockchipdrm 的 colortemp 系列内核参数 (游戏/Kodi 同样生效)。
 #     参数在每次开机时回到默认值, 所以必须在这里重放。
+#   * 音量: ogage 热键和 ES 菜单都直接改 ALSA Master 且不保存, 开机回到
+#     codec 默认 100%. 这里同样开机恢复 /home/ark/.config/volume.level,
+#     运行中变化即保存.
 # ============================================================
 CFG="/home/ark/.config/brightness.level"
 SYS="/sys/class/backlight/backlight/brightness"
 CT_CONF="/home/ark/.config/colortemp.conf"
 CT_SYS="/sys/module/rockchipdrm/parameters/colortemp"
+VOL_CFG="/home/ark/.config/volume.level"
+VOL_CTL="Master"
+[ -r /home/ark/ogage.conf ] && VOL_CTL=$(awk -F= '$1=="VOLUME_CONTROL"{print $2; exit}' /home/ark/ogage.conf 2>/dev/null)
+[ -n "$VOL_CTL" ] || VOL_CTL="Master"
+
+read_volume() {
+  amixer sget "$VOL_CTL" 2>/dev/null | grep -o '\[[0-9]\+%\]' | head -n1 | tr -dc '0-9'
+}
+
+apply_saved_volume() {
+  local v
+  [ -f "$VOL_CFG" ] || return 0
+  v=$(cat "$VOL_CFG" 2>/dev/null || true)
+  if [[ "$v" =~ ^[0-9]+$ ]] && [ "$v" -le 100 ]; then
+    amixer -q sset "$VOL_CTL" "${v}%" >/dev/null 2>&1 \
+      && echo "[brightness-watch] volume restored: $v%"
+  fi
+}
 
 apply_saved_brightness() {
   local bl
+  [ -n "$SYS" ] || return 0
   [ -f "$CFG" ] || return 0
   bl=$(cat "$CFG" 2>/dev/null || true)
   if [[ "$bl" =~ ^[0-9]+$ ]] && [ "$bl" -le 255 ]; then
@@ -45,20 +67,32 @@ apply_saved_colortemp() {
 }
 
 [ -w "$SYS" ] || SYS=$(ls -d /sys/class/backlight/*/brightness 2>/dev/null | head -n1)
-[ -n "$SYS" ] && [ -w "$SYS" ] || exit 0
+HAVE_BL=0
+[ -n "$SYS" ] && [ -w "$SYS" ] && HAVE_BL=1
 
 apply_saved_brightness
 apply_saved_colortemp
+apply_saved_volume
 
 mkdir -p "$(dirname "$CFG")"
 last=$(cat "$CFG" 2>/dev/null || true)
+last_vol=$(cat "$VOL_CFG" 2>/dev/null || true)
 
 while :; do
-  v=$(cat "$SYS" 2>/dev/null || true)
-  if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 20 )) && [ "$v" != "$last" ]; then
-    last="$v"
-    if [ "$(cat "$CFG" 2>/dev/null)" != "$v" ]; then
-      printf '%s\n' "$v" > "$CFG" && chown 1000:1000 "$CFG" 2>/dev/null
+  if [ "$HAVE_BL" = 1 ]; then
+    v=$(cat "$SYS" 2>/dev/null || true)
+    if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 20 )) && [ "$v" != "$last" ]; then
+      last="$v"
+      if [ "$(cat "$CFG" 2>/dev/null)" != "$v" ]; then
+        printf '%s\n' "$v" > "$CFG" && chown 1000:1000 "$CFG" 2>/dev/null
+      fi
+    fi
+  fi
+  vcur=$(read_volume)
+  if [[ "$vcur" =~ ^[0-9]+$ ]] && [ "$vcur" != "$last_vol" ]; then
+    last_vol="$vcur"
+    if [ "$(cat "$VOL_CFG" 2>/dev/null)" != "$vcur" ]; then
+      printf '%s\n' "$vcur" > "$VOL_CFG" && chown 1000:1000 "$VOL_CFG" 2>/dev/null
     fi
   fi
   sleep 2

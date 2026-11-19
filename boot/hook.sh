@@ -246,51 +246,66 @@ apply_localization() {
   msg "Localization: ES=$es_lang RA=$ra_lang PPSSPP=$ppsspp_lang"
 }
 
-# 私编中文 duckstation-mini (不随镜像发布, CC BY-NC-ND): dtbselector 选中文
-# (/boot/.cn 存在) 且 boot 分区放了 duckstation-mini-zh-private.tar.xz 时,
-# 解到 /opt 覆盖安装, standalone-duckstation 启动器会自动优先用它;
-# 把压缩包从 boot 分区删掉(或选 English)下次开机就回官方版.
+# 私编中文包 (不随镜像发布): /boot/.cn 存在且 boot 分区放了
+# chinese-private.tar.xz 时, 安装 duckstation-mini-zh-private -> /opt,
+# 3dsdec -> /usr/local/bin (3DS 解密/字体/DLC 依赖它; 没有时启动器只跑已解密镜像).
+# 删掉压缩包或选 English 下次开机即恢复公开镜像状态.
 DS_PRIV_DIR=/opt/duckstation-mini-zh-private
-DS_PRIV_STAMP="$DS_PRIV_DIR/.archive"
-apply_private_duckstation() {
-  local t="" stamp
+TOOL_DST=/usr/local/bin/3dsdec
+TOOL_STAMP=/usr/local/bin/.3dsdec.private
+PRIV_STAMP=/opt/.chinese-private
+apply_private_chinese() {
+  local t="" stamp td
   if [ ! -f /boot/.cn ]; then
-    # 只回收我们自己装的 (有 stamp), 不动手动部署的目录
-    if [ -f "$DS_PRIV_STAMP" ]; then
+    if [ -f "$DS_PRIV_DIR/.archive" ]; then
       rm -rf "$DS_PRIV_DIR"
       msg "Private duckstation-mini-zh removed (language not zh-CN)"
     fi
+    if [ -f "$TOOL_STAMP" ]; then
+      rm -f "$TOOL_DST" "$TOOL_STAMP"
+      msg "Private 3dsdec removed (language not zh-CN)"
+    fi
+    rm -f "$PRIV_STAMP"
     return 0
   fi
-  for t in /boot/duckstation-mini-zh-private.tar.xz \
-           /boot/duckstation-mini-zh-private.tar.gz \
+  for t in /boot/chinese-private.tar.xz /boot/chinese-private.tar.gz /boot/chinese-private.tar \
+           /boot/duckstation-mini-zh-private.tar.xz /boot/duckstation-mini-zh-private.tar.gz \
            /boot/duckstation-mini-zh-private.tar; do
     [ -f "$t" ] && break
     t=""
   done
   [ -n "$t" ] || return 0
   stamp="$(basename "$t")-$(stat -c %s "$t" 2>/dev/null)"
-  [ "$(cat "$DS_PRIV_STAMP" 2>/dev/null)" = "$stamp" ] && return 0
-  msg "Installing private duckstation-mini-zh from $t"
-  rm -rf "$DS_PRIV_DIR" "$DS_PRIV_DIR.tmp"
-  mkdir -p "$DS_PRIV_DIR.tmp"
-  if ! tar -xf "$t" -C "$DS_PRIV_DIR.tmp"; then
+  [ "$(cat "$PRIV_STAMP" 2>/dev/null)" = "$stamp" ] && return 0
+
+  msg "Installing private Chinese package from $t"
+  td=/opt/.chinese-private.tmp
+  rm -rf "$td"
+  mkdir -p "$td" || return 1
+  if ! tar -xf "$t" -C "$td"; then
     warn "extract failed: $t (需要 /opt 有足够空间)"
-    rm -rf "$DS_PRIV_DIR.tmp"
+    rm -rf "$td"
     return 1
   fi
-  if [ -d "$DS_PRIV_DIR.tmp/duckstation-mini-zh-private" ]; then
-    mv "$DS_PRIV_DIR.tmp/duckstation-mini-zh-private" "$DS_PRIV_DIR"
-  else
-    mv "$DS_PRIV_DIR.tmp" "$DS_PRIV_DIR"
+
+  if [ -d "$td/duckstation-mini-zh-private" ]; then
+    rm -rf "$DS_PRIV_DIR"
+    mv "$td/duckstation-mini-zh-private" "$DS_PRIV_DIR"
+    chmod -R 777 "$DS_PRIV_DIR" 2>/dev/null || true
+    printf '%s\n' "$stamp" > "$DS_PRIV_DIR/.archive"
   fi
-  rm -rf "$DS_PRIV_DIR.tmp"
-  chmod -R 777 "$DS_PRIV_DIR" 2>/dev/null || true
-  printf '%s\n' "$stamp" > "$DS_PRIV_STAMP"
-  # 一次性输入: 装好后删掉 boot 分区上的压缩包, 不再长期占用 32MB
+  if [ -f "$td/3dsdec" ]; then
+    cp -f "$td/3dsdec" "$TOOL_DST"
+    chmod 755 "$TOOL_DST"
+    printf '%s\n' "$stamp" > "$TOOL_STAMP"
+    msg "Installed private 3dsdec"
+  fi
+  rm -rf "$td"
+  printf '%s\n' "$stamp" > "$PRIV_STAMP"
+  # 一次性输入: 装好后删掉 boot 分区上的压缩包, 不再长期占用
   rm -f "$t" 2>/dev/null && msg "Removed $t after install"
   sync
-  msg "Private duckstation-mini-zh installed: $stamp"
+  msg "Private Chinese package installed: $stamp"
 }
 
 apply_joy_conf() {
@@ -432,7 +447,7 @@ apply_all_quirks() {
   apply_ogage_hotkey
   apply_retroarch_axes
   apply_armsx2_hotkeys
-  apply_private_duckstation
+  apply_private_chinese
 }
 
 # ==================== 附加处理 ====================

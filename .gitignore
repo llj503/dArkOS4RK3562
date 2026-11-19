@@ -23,6 +23,7 @@ roms/**
 !roms/**/.init
 突突兔*.zip
 SCPH1001.BIN
+chinese-private.tar.xz
 
 # GitHub 单文件 100MB 限制 (同 arkos4clone 的做法):
 # 原始 .so 不入库, 仓库只存同名 .so.xz; CI 构建前 unxz 还原,
