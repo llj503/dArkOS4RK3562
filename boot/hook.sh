@@ -94,9 +94,6 @@ set_hostname() {
     echo "$dev" > /etc/hostname 2>/dev/null && changed="yes"
   fi
 
-  # Keep exactly one 127.0.1.1 line for this device. A stale line (e.g.
-  # "ngp45ht" after switching to ais) makes sudo fail with
-  # "unable to resolve host".
   if ! grep -qxE "127\.0\.1\.1[[:space:]]+$dev([[:space:]]|$)" /etc/hosts 2>/dev/null; then
     sed -i -E '/^[[:space:]]*127\.0\.1\.1[[:space:]]/d' /etc/hosts 2>/dev/null || true
     echo "127.0.1.1    $dev" >> /etc/hosts 2>/dev/null || true
@@ -392,9 +389,6 @@ apply_tools_gamelist() {
   msg "Tools gamelist: $lang"
 }
 
-# ARMSX2 (PS2): 暂停菜单 = 机型热键 + Y。首启/换机型时按 console_detect 的
-# HOTKEY_TYPE 写入 ini; ps2.sh 每次启动还会再写一遍 (ARMSX2 退出会把 ini 恢复成
-# 默认 Keyboard/Escape)。
 apply_armsx2_hotkeys() {
   local hk line f
   case "${HOTKEY_TYPE:-}" in
@@ -443,12 +437,6 @@ apply_all_quirks() {
 
 # ==================== 附加处理 ====================
 # WiFi 驱动加载 (取代 wifi-driver-load.service, 每次开机执行, modprobe 幂等)。
-# 硬件矩阵:
-#   SDIO: rg52mini / rg43h / rg43v (同型号两个硬件版本: RK915 或 AIC8800),
-#         ais (AIC8800D80)
-#   USB : ngp45ht (AIC8800DC), xf55h (ZTop ZT9101)
-# 判别方式: 只有 SDIO 机型有 wireless-wlan 节点且 status=okay;
-#   ngp45ht 该节点为 disabled, xf55h 没有该节点 → 两者都走 USB。
 # 为什么 SDIO 必须由 userspace 触发:
 #   1) 芯片上电由驱动 init 完成 (rockchip_wifi_power), 未上电不会枚举,
 #      udev 拿不到 SDIO modalias (自举死锁);
@@ -492,14 +480,6 @@ apply_fc_cache() {
 }
 
 
-# RetroArch udev 手柄的轴编号按"已存在的 ABS 轴"压缩, 不是 evdev 的 ABS 码:
-#   rg52mini/rg43h/rg43v/ais/xf55h 有模拟扳机 (ABS_Z/ABS_RZ), 轴序为
-#     X=0 Y=1 Z=2 RX=3 RY=4 RZ=5
-#   ngp45ht 的 L2/R2 是数字键, 只有 ABS_X/Y/RX/RY, 轴序压缩为
-#     X=0 Y=1 RX=2 RY=3
-# autoconfig 里写死的 r_x=3/r_y=4 在 ngp45ht 上会把右摇杆的竖直轴当成 X、
-# 水平轴落到不存在的轴 4 (光标只能左右跟着上下动, 左右完全没反应);
-# l2_axis=2 还会把右摇杆水平轴当 L2. 按 DT 是否有 l2-abs 区分两种情况.
 apply_retroarch_axes() {
   local analog_triggers="yes"
   if [ -r /proc/device-tree/play_joystick/io-channel-names ]; then
