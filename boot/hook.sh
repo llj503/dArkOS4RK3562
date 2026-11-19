@@ -493,7 +493,7 @@ apply_fc_cache() {
 
 # Vita3K 的热键与屏幕几何都不在这里分发: psv.sh 启动时直接问
 # console_detect -s, 再把结果交给 vita3k-pad.py / vita3k-osd。
-# 不写 .menu-combo / .hotkey-type / .screen, 也不设机型分支。
+# 也不再向数据目录写任何状态文件, 不设机型分支。
 
 # RetroArch udev 手柄的轴编号按"已存在的 ABS 轴"压缩, 不是 evdev 的 ABS 码:
 #   rg52mini/rg43h/rg43v/ais/xf55h 有模拟扳机 (ABS_Z/ABS_RZ), 轴序为
