@@ -1545,7 +1545,7 @@
 		<emulators>
 			<emulator name="retroarch">
 				<cores>
-					<core>hakux</core>
+					<core>hakux-lr</core>
 				</cores>
 			</emulator>
 		</emulators>
@@ -4524,7 +4524,7 @@
 		<emulators>
 			<emulator name="retroarch">
 				<cores>
-					<core>hakux</core>
+					<core>hakux-lr</core>
 				</cores>
 			</emulator>
 		</emulators>

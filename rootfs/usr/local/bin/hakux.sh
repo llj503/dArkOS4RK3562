@@ -6,4 +6,4 @@ CFG=/tmp/hakux-video.cfg
 printf 'video_driver = "vulkan"\n' > "$CFG"
 exec /usr/local/bin/retroarch -c /home/ark/.config/retroarch/retroarch.cfg \
   --appendconfig "$CFG" \
-  -L /home/ark/.config/retroarch/cores/hakux_libretro.so "$@"
+  -L /home/ark/.config/retroarch/cores/hakux-lr_libretro.so "$@"
