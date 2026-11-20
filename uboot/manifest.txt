@@ -2,13 +2,13 @@ rkbin_commit=7e437acd9d911085d2631eca91c196bc75ae28e0
 rkbin_source=/home/lcdyk/AveyondFly-u-boot/third_party/rkbin/rkbin-7e437acd9d911085d2631eca91c196bc75ae28e0.tar.gz
 defconfig=rk3562_defconfig
 cross_compile=/opt/toolchains/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
-ddr_source=/home/lcdyk/rkbin/bin/rk35/rk3562_ddr_1332MHz_v1.10.bin
+ddr_source=/home/lcdyk/rkbin/bin/rk35/rk3562_ddr_920MHz_v1.10.bin
 loader_source=rk3562_spl_loader_v1.07.107.bin
-a688503a3ec064b2e5b339a4e1199e3415138a4c77337222c302bc0497a371e5  /home/lcdyk/ds-build/uboot-vibe/idblock.img
-ddd0d506eb1aadcb994a2026b8eda3bd3130680cc83c4dc5e15efe3faf330f34  /home/lcdyk/ds-build/uboot-vibe/rk3562-download-loader.bin
-2e749f1f21250dba8b018aca45230464b6394eb5364cb71ccc68cf18600083cd  /home/lcdyk/ds-build/uboot-vibe/uboot.img
-8f6f04da5dd9e3b12f3da645480e4e6be5298c1098bc2ca60a75cae15a065be5  /home/lcdyk/ds-build/uboot-vibe/rk3562-uboot-16m.bin
-60567a35108b0ebdde6a96824e4ec7b84263701292ecab831e4651799a43d6ae  /home/lcdyk/ds-build/uboot-vibe/u-boot-nodtb.bin
-e7ffa453e530d09e72c4042814ff0e90d97facacf66aa813fe384824d4c6caeb  /home/lcdyk/ds-build/uboot-vibe/u-boot.dtb
-88cb5082ff0c20411b36772b91ddaf920b4d445e3ad25bec282ff04eea2459d5  /home/lcdyk/ds-build/uboot-vibe/u-boot-spl.bin
-f11f4974308a54a5879bd5bb96b8e112f6d8e996540fe2422ca482de14635e60  /home/lcdyk/ds-build/uboot-vibe/rk3562-ddr.bin
+8fcae62be0e904fa3bf5f4571df225863286b9a90e12ffa2122c886cebebaeaa  /home/lcdyk/ds-build/uboot-vibe-920b/idblock.img
+c3d72b81ae4b3809e493febbcccda365a5770524fe5f453d887ab82664ad1831  /home/lcdyk/ds-build/uboot-vibe-920b/rk3562-download-loader.bin
+36e4fe63d21296573c5344a0476ea4932975e88f24a96d9bd26dab332ff4b005  /home/lcdyk/ds-build/uboot-vibe-920b/uboot.img
+57b0f0c60d0828d7952587801cd25335a59d1f520eaf910e7da41300dc19b8e9  /home/lcdyk/ds-build/uboot-vibe-920b/rk3562-uboot-16m.bin
+5e6dac03e4f53a26002c2e57577f526ec10f70581b411bf4b885290d7e71f9db  /home/lcdyk/ds-build/uboot-vibe-920b/u-boot-nodtb.bin
+e7ffa453e530d09e72c4042814ff0e90d97facacf66aa813fe384824d4c6caeb  /home/lcdyk/ds-build/uboot-vibe-920b/u-boot.dtb
+1f7f8d58e1b6c2dde78571c78e33463b50c21f6ab1f4390f3c001a5b037bb41f  /home/lcdyk/ds-build/uboot-vibe-920b/u-boot-spl.bin
+bb36fe9ef4214339012daa438e249116453c69de199a0ae37b888c7df57e2c34  /home/lcdyk/ds-build/uboot-vibe-920b/rk3562-ddr.bin
