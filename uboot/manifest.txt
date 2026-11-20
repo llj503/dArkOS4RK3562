@@ -4,11 +4,11 @@ defconfig=rk3562_defconfig
 cross_compile=/opt/toolchains/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 ddr_source=/home/lcdyk/rkbin/bin/rk35/rk3562_ddr_920MHz_v1.10.bin
 loader_source=rk3562_spl_loader_v1.07.107.bin
-8fcae62be0e904fa3bf5f4571df225863286b9a90e12ffa2122c886cebebaeaa  /home/lcdyk/ds-build/uboot-vibe-920b/idblock.img
-c3d72b81ae4b3809e493febbcccda365a5770524fe5f453d887ab82664ad1831  /home/lcdyk/ds-build/uboot-vibe-920b/rk3562-download-loader.bin
-36e4fe63d21296573c5344a0476ea4932975e88f24a96d9bd26dab332ff4b005  /home/lcdyk/ds-build/uboot-vibe-920b/uboot.img
-57b0f0c60d0828d7952587801cd25335a59d1f520eaf910e7da41300dc19b8e9  /home/lcdyk/ds-build/uboot-vibe-920b/rk3562-uboot-16m.bin
-5e6dac03e4f53a26002c2e57577f526ec10f70581b411bf4b885290d7e71f9db  /home/lcdyk/ds-build/uboot-vibe-920b/u-boot-nodtb.bin
-e7ffa453e530d09e72c4042814ff0e90d97facacf66aa813fe384824d4c6caeb  /home/lcdyk/ds-build/uboot-vibe-920b/u-boot.dtb
-1f7f8d58e1b6c2dde78571c78e33463b50c21f6ab1f4390f3c001a5b037bb41f  /home/lcdyk/ds-build/uboot-vibe-920b/u-boot-spl.bin
-bb36fe9ef4214339012daa438e249116453c69de199a0ae37b888c7df57e2c34  /home/lcdyk/ds-build/uboot-vibe-920b/rk3562-ddr.bin
+5486016191b27b5f39c2beb469ba395430f82b7a134c7177911c00fafc210924  /home/lcdyk/ds-build/uboot-charge-920/idblock.img
+a3960cc1f863af44afb0ebc1bbd335154161191c9c004beb7925611bd8adf03f  /home/lcdyk/ds-build/uboot-charge-920/rk3562-download-loader.bin
+021b9926e6b41d722aad1cf3e48390ffcf17986f5e59c17db655c7a57af794c8  /home/lcdyk/ds-build/uboot-charge-920/uboot.img
+bba250828df91e9e2aca59db750fc334d46457d4d7772e5d35c1f766349935dc  /home/lcdyk/ds-build/uboot-charge-920/rk3562-uboot-16m.bin
+43dad52cc1c57ac8f7690e8117da1df40b5a8ad146cc9c982e88ca90eff0d565  /home/lcdyk/ds-build/uboot-charge-920/u-boot-nodtb.bin
+e7ffa453e530d09e72c4042814ff0e90d97facacf66aa813fe384824d4c6caeb  /home/lcdyk/ds-build/uboot-charge-920/u-boot.dtb
+925c58e0324d68f63f15b2e85165c68d5bb11c144f71d6a30d2149f6267a93a0  /home/lcdyk/ds-build/uboot-charge-920/u-boot-spl.bin
+bb36fe9ef4214339012daa438e249116453c69de199a0ae37b888c7df57e2c34  /home/lcdyk/ds-build/uboot-charge-920/rk3562-ddr.bin
