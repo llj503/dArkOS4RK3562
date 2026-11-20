@@ -268,13 +268,8 @@ apply_private_chinese() {
     rm -f "$PRIV_STAMP"
     return 0
   fi
-  for t in /boot/chinese-private.tar.xz /boot/chinese-private.tar.gz /boot/chinese-private.tar \
-           /boot/duckstation-mini-zh-private.tar.xz /boot/duckstation-mini-zh-private.tar.gz \
-           /boot/duckstation-mini-zh-private.tar; do
-    [ -f "$t" ] && break
-    t=""
-  done
-  [ -n "$t" ] || return 0
+  t=/boot/chinese-private.tar.xz
+  [ -f "$t" ] || return 0
   stamp="$(basename "$t")-$(stat -c %s "$t" 2>/dev/null)"
   [ "$(cat "$PRIV_STAMP" 2>/dev/null)" = "$stamp" ] && return 0
 

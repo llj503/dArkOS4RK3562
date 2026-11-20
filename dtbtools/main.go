@@ -20,6 +20,13 @@ import (
 
 var Version = "dev"
 
+const panURL = "https://pan.baidu.com/s/1dZ0Z4mSGE0q6eNEEj0a3RQ?pwd=lc66"
+
+// 清屏: Windows 10+ 的控制台也支持 ANSI 转义, 老系统退化为换页
+func clearScreen() {
+	fmt.Print("\033[2J\033[H")
+}
+
 // ---------- 机型条目 ----------
 type entry struct {
 	dev string // conf.d 文件名 (设备名)
@@ -123,7 +130,8 @@ func main() {
 	fmt.Printf("  FDT %s\n", e.dtb)
 
 	// 语言选择: 中文写 /boot/.cn, 开机 hook 据此把 ES/RA/PPSSPP 切成中文
-	fmt.Println("\n语言 / Language:")
+	clearScreen()
+	fmt.Println("语言 / Language:")
 	fmt.Println("  1) English")
 	fmt.Println("  2) 中文 (简体)")
 	fmt.Print("\n输入编号 (回车=English): ")
@@ -137,11 +145,38 @@ func main() {
 		} else {
 			fmt.Println("✔ 已选择中文: 首次开机会自动切换 ES / RetroArch / PPSSPP 语言")
 		}
+
+		clearScreen()
+		fmt.Println("中文附加包 / Private Chinese Package")
+		fmt.Println(strings.Repeat("-", 56))
+		fmt.Println()
+		fmt.Println("中文版还需要一个私有附加包:  chinese-private.tar.xz")
+		fmt.Println("(内含的中文版 duckstation-mini-zh-private 与 3dsdec 不随公开镜像发布)")
+		fmt.Println()
+		fmt.Println("请从百度网盘下载该文件, 并放到本工具所在目录:")
+		fmt.Printf("  %s\n", baseDir)
+		fmt.Println()
+		fmt.Println("下载地址 / Download:")
+		fmt.Printf("  %s\n", panURL)
+		fmt.Println("  提取码: lc66")
+		fmt.Println()
+		if _, err := os.Stat(filepath.Join(baseDir, "chinese-private.tar.xz")); err == nil {
+			fmt.Println("✔ 已检测到: chinese-private.tar.xz")
+		} else {
+			fmt.Println("ℹ 当前目录还没有 chinese-private.tar.xz, 下载后放进去即可, 不影响开机")
+		}
+		fmt.Println()
+		fmt.Print("按回车继续...")
+		in.ReadString('\n')
+		fmt.Println()
+		fmt.Println("✔ 首次开机将自动安装中文附加包 (无需解压)")
 	} else {
 		// 选择英文: 移除中文标记, 保持默认英文
 		if err := os.Remove(cnPath); err == nil {
+			clearScreen()
 			fmt.Println("✔ 已选择 English (已移除 .cn)")
 		} else {
+			clearScreen()
 			fmt.Println("✔ 已选择 English")
 		}
 	}
