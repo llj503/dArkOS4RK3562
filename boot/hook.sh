@@ -52,7 +52,7 @@ SCREEN_ROTATION=0
 LED_TYPE="unsupported"
 
 SDL2_VERSION="libSDL2-2.0.so.0.3200.10"
-SDL3_VERSION="libSDL3.so.0.4.16"
+SDL3_VERSION="libSDL3.so.0.4.20"
 
 detect_device() {
   if [[ -x "$CONSOLE_DETECT" ]]; then
@@ -464,13 +464,10 @@ load_wifi_modules() {
     return 0
   fi
 
-  # USB 机型: AIC 与 ZT9101 驱动互不冲突, 都注册, 由 USB ID 各自绑定;
-  # 设备枚举晚到也会被已注册的 driver/udev 接住。
+  # USB 机型: AIC 两段式栈需要 fw loader 先于 fdrv 加载, 所以显式 modprobe;
+  # zt9101_ztopmac_usb 有 usb modalias, 由 udev/kmod 在设备枚举时自动加载。
   if modprobe aic_load_fw_usb 2>/dev/null && modprobe aic8800_fdrv_usb 2>/dev/null; then
     msg "WiFi: aic8800 USB stack loaded"
-  fi
-  if modprobe zt9101_ztopmac_usb 2>/dev/null; then
-    msg "WiFi: zt9101 USB loaded"
   fi
 }
 

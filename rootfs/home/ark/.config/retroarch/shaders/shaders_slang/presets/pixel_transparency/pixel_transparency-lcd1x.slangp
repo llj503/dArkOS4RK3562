@@ -1,0 +1,23 @@
+shaders = 3
+
+shader0 = ../../handheld/shaders/pixel_transparency/pt-0-shadow-cache.slang
+filter_linear0 = false
+scale_type0 = source
+scale_x0 = 3.1
+scale_y0 = 1.1
+
+shader1 = ../../handheld/shaders/pixel_transparency/grids/lcd1x/input.slang
+filter_linear1 = false
+wrap_mode1 = clamp_to_border
+mipmap_input1 = false
+float_framebuffer1 = false
+srgb_framebuffer1 = false
+scale_type1 = viewport
+alias1 = LCDInput
+
+shader2 = ../../handheld/shaders/pixel_transparency/grids/lcd1x/pixel_transparency.slang
+filter_linear2 = false
+
+PT_PALETTE = "1.0"
+PT_POLARIZER = "0.0"
+PT_HIGHLIGHTS = "0.0"

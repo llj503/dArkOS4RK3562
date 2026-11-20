@@ -1,0 +1,6 @@
+# AIC8800D80 88M80 placeholder ID -> vendor SCSI mode switch
+DefaultVendor=0x1111
+DefaultProduct=0x1111
+TargetVendor=0xa69c
+TargetProduct=0x8d80
+MessageContent="555342431234567800000000000010fd0000000000000000000000000000f2"

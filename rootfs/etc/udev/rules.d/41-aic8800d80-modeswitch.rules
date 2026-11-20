@@ -1,0 +1,2 @@
+# AIC8800D80 88M80 (1111:1111 fake CD) -> private SCSI switch -> a69c:8d80 -> a69c:8d81
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1111", ATTR{idProduct}=="1111", RUN+="/bin/sh -c 'grep -q aic_load_fw_usb /proc/modules || /sbin/insmod /lib/modules/5.10.226/extra/aic8800-usb/aic_load_fw_usb.ko; grep -q aic8800_fdrv_usb /proc/modules || /sbin/insmod /lib/modules/5.10.226/extra/aic8800-usb/aic8800_fdrv_usb.ko; /usr/sbin/usb_modeswitch -c /etc/usb_modeswitch.d/1111:1111'"
