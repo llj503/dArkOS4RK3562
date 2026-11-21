@@ -19,6 +19,10 @@ if [ -r "$BL_CFG" ] && [ -w "$BL_SYS" ]; then
   esac
 fi
 
+# 色温/伽马由内核模块参数承载, 重启后回到默认; 按 ~/.config/colortemp.conf 恢复
+[ -x /usr/local/bin/colortemp ] && timeout 5 /usr/local/bin/colortemp -apply
+
 [ -x /usr/local/bin/ledctl ] && timeout 5 /usr/local/bin/ledctl apply
 [ -x /usr/local/bin/fanctl ] && timeout 5 /usr/local/bin/fanctl apply
+[ -x /usr/local/bin/panel_set.sh ] && timeout 5 /usr/local/bin/panel_set.sh apply
 exit 0
