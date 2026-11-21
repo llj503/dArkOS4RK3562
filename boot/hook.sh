@@ -254,6 +254,25 @@ DS_PRIV_DIR=/opt/duckstation-mini-zh-private
 TOOL_DST=/usr/local/bin/3dsdec
 TOOL_STAMP=/usr/local/bin/.3dsdec.private
 PRIV_STAMP=/opt/.chinese-private
+install_private_roms() {
+  local src=/opt/.chinese-private-roms
+  [ -d "$src" ] || return 0
+  [ -d /roms ] || return 0
+  cp -rn "$src"/. /roms/ 2>/dev/null || true
+  chown -R ark:ark /roms/pico-8 2>/dev/null || true
+}
+
+install_private_bios() {
+  local src=/opt/.chinese-private-bios d
+  [ -d "$src" ] || return 0
+  for d in /roms/bios /roms2/bios; do
+    [ -d "$(dirname "$d")" ] || continue
+    mkdir -p "$d" 2>/dev/null || continue
+    cp -n "$src"/* "$d"/ 2>/dev/null || true
+    chown ark:ark "$d"/* 2>/dev/null || true
+  done
+}
+
 apply_private_chinese() {
   local t="" stamp td
   if [ ! -f /boot/.cn ]; then
@@ -294,6 +313,28 @@ apply_private_chinese() {
     chmod 755 "$TOOL_DST"
     printf '%s\n' "$stamp" > "$TOOL_STAMP"
     msg "Installed private 3dsdec"
+  fi
+  if [ -d "$td/bios" ]; then
+    rm -rf /opt/.chinese-private-bios
+    mkdir -p /opt/.chinese-private-bios
+    cp -f "$td/bios"/* /opt/.chinese-private-bios/ 2>/dev/null || true
+    if [ "$(stat -f -c %T /roms 2>/dev/null)" = "exfat" ]; then
+      install_private_bios
+      msg "Installed 3DS BIOS/keys into /roms/bios"
+    else
+      warn "3DS BIOS staged; /roms not expanded yet, will install next boot"
+    fi
+  fi
+  if [ -d "$td/roms" ]; then
+    rm -rf /opt/.chinese-private-roms
+    mkdir -p /opt/.chinese-private-roms
+    cp -a "$td/roms/." /opt/.chinese-private-roms/ 2>/dev/null || true
+    if [ "$(stat -f -c %T /roms 2>/dev/null)" = "exfat" ]; then
+      install_private_roms
+      msg "Installed private ROM payload into /roms (pico-8)"
+    else
+      warn "private ROM payload staged; /roms not expanded yet, will install next boot"
+    fi
   fi
   rm -rf "$td"
   printf '%s\n' "$stamp" > "$PRIV_STAMP"
@@ -610,6 +651,8 @@ main() {
   # module 参数每次开机都回到默认, 该服务本来就在开机时启动并常驻).
   # gptokeyb (onscripter 的菜单导航) 需要写 uinput
   chmod 666 /dev/uinput 2>/dev/null || true
+  install_private_bios
+  install_private_roms
   load_wifi_modules
   # 清 RK817 POWER_EN_SAVE0/1，避免关机时 reboot-notifier 把 POWER_EN
   # 恢复回去导致关机后自启；与 ROCKNIX 的 not-save-power-en 等价.
