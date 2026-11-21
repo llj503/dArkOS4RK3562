@@ -86,6 +86,7 @@ sudo rm -f "$D/mnt/root/usr/local/bin/freej2me_files/freej2me-sdl.jar" \
 # 精简 /opt/system 工具菜单: 去掉不再提供的脚本
 sudo rm -f \
   "$D/mnt/root/opt/system/Advanced/Swap Start+Select with FN+Back.sh" \
+  "$D/mnt/root/opt/system/Advanced/Switch to SD2 for Roms.sh" \
   "$D/mnt/root/opt/system/Advanced/Disable Fan.sh" \
   "$D/mnt/root/opt/system/Advanced/Fix Global Hotkeys.sh" \
   "$D/mnt/root/opt/system/Advanced/Fix Audio.sh" \
