@@ -42,6 +42,40 @@ wait_for_a() {
     return 0
 }
 
+# 安装完成后: A = 删除源文件, B = 保留. 返回 0 表示删除, 1 表示保留.
+wait_delete_or_keep() {
+    msg "Press A to DELETE the source file, B to KEEP it"
+    if [ ! -r /usr/local/bin/buttonmon.sh ]; then
+        sleep 3
+        return 1
+    fi
+    . /usr/local/bin/buttonmon.sh
+    local i=0
+    while [ "$i" -lt 1200 ]; do
+        Test_Button_A
+        if [ $? -eq 10 ]; then
+            sleep 0.3
+            return 0
+        fi
+        Test_Button_B
+        if [ $? -eq 10 ]; then
+            sleep 0.3
+            return 1
+        fi
+        sleep 0.1
+        i=$((i + 1))
+    done
+    return 1
+}
+
+after_install_prompt() {
+    if wait_delete_or_keep; then
+        rm -f "$ROM" && msg "Source file deleted" || msg "Delete failed: $ROM"
+    else
+        msg "Source file kept"
+    fi
+}
+
 case "${ROM,,}" in
     *.zip|*.7z) msg "Extract the archive before launching"; exit 1 ;;
 esac
@@ -100,6 +134,10 @@ KEYS=()
 for k in /roms/bios/3dsdec.keys /roms2/bios/3dsdec.keys; do
     [ -f "$k" ] && { KEYS=(--keys "$k"); break; }
 done
+SEEDDB=""
+for f in /roms/bios/seeddb.bin /roms2/bios/seeddb.bin; do
+    [ -f "$f" ] && { SEEDDB="$f"; break; }
+done
 
 USERDIR="${AZAHAR_USER_DIR:-}"
 if [ -z "$USERDIR" ]; then
@@ -108,10 +146,12 @@ if [ -z "$USERDIR" ]; then
     SAVE=${SAVE/#\~/$HOME}
     USERDIR="$SAVE/Azahar"
 fi
+mkdir -p "$USERDIR" 2>/dev/null || true
 
 key_opts() {
     [ -n "$BOOT9" ] && printf '%s\n' --boot9 "$BOOT9"
     [ ${#KEYS[@]} -gt 0 ] && printf '%s\n' "${KEYS[@]}"
+    [ -n "$SEEDDB" ] && printf '%s\n' --seeddb "$SEEDDB"
 }
 
 ROMDIR="$(dirname "$ROM")"
@@ -193,7 +233,28 @@ case "${ROM,,}" in
         # 标题 ID 高 32 位为 0004008c 的是 DLC：只安装，不启动。
         tid=$(cia_title_id || true)
         is_dlc=no
-        [ ${#tid} -eq 16 ] && [ "${tid:0:8}" = "0004008c" ] && is_dlc=yes
+        is_update=no
+        if [ ${#tid} -eq 16 ]; then
+            case "${tid,,}" in
+                0004008c*) is_dlc=yes ;;
+                0004000e*) is_update=yes ;;
+            esac
+        fi
+
+        if [ "$is_update" = yes ]; then
+            # 0004000E 是更新补丁 (Update): 安装到模拟 NAND 的 title 目录, 不启动
+            msg "Installing update $tid..."
+            out=$("$TOOL" --install-update "$ROM" "$USERDIR" $(key_opts) 2>&1)
+            rc=$?
+            if [ "$rc" -eq 0 ]; then
+                msg "Update installed successfully"
+                after_install_prompt
+                exit 0
+            fi
+            msg "Update install failed: $out"
+            wait_for_a
+            exit 1
+        fi
 
         if [ "$is_dlc" = yes ]; then
             # DLC 内容在模拟 SD 卡 (media_type=1), ticket 在 NAND dbs.
@@ -221,16 +282,19 @@ case "${ROM,,}" in
             rc=$?
             if [ "$rc" -eq 0 ]; then
                 msg "DLC installed successfully"
-            else
-                msg "DLC install failed: $out"
+                after_install_prompt
+                exit 0
             fi
+            msg "DLC install failed: $out"
             wait_for_a
-            [ "$rc" -eq 0 ] && exit 0
             exit 1
         fi
 
-        # 读不到标题 ID 时仍按原逻辑探测是否为 DLC。
-        if [ "$is_dlc" = no ]; then
+        is_game=no
+        [ ${#tid} -eq 16 ] && [ "${tid:0:8}" = "00040000" ] && is_game=yes
+
+        # 只有标题 ID 读不到时才用 --install-dlc 探测; 已知是游戏的直接解密
+        if [ "$is_dlc" = no ] && [ "$is_game" != yes ]; then
             out=$("$TOOL" --install-dlc "$ROM" "$USERDIR" $(key_opts) 2>&1)
             rc=$?
             if [ "$rc" -eq 0 ]; then
