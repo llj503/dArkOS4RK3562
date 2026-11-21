@@ -1,0 +1,27 @@
+# RK3562 audio: default -> plug -> dmix -> hw:0,0 (RK817)
+#
+# 不使用 softvol: 它的 Master 是用户态软音量, 只在持有 PCM 的客户端里可写,
+# amixer/ES 打开 hw ctl 时看到的是内核里同名的只读占位控件, 写入返回 EPERM。
+# 音量统一走 codec 的 DAC Playback Volume (硬件音量, 任何客户端都能改)。
+pcm.!default {
+        type            plug
+        slave.pcm       "ddmix"
+}
+
+ctl.!default {
+        type            hw
+        card            0
+}
+
+pcm.ddmix {
+        ipc_key         5978293
+        ipc_key_add_uid yes
+        type            dmix
+        slave {
+                pcm         "hw:0,0"
+                period_time 0
+                period_size 1024
+                buffer_size 4096
+                rate 44100
+        }
+}

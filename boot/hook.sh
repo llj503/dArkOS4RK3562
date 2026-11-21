@@ -325,6 +325,11 @@ apply_es_setting() {
       else
         sed -i 's|name="Language" value="[^"]*"|name="Language" value="en"|' "$target" 2>/dev/null || true
       fi
+
+      # 音量走 codec 的 DAC (Master 是只读占位控件, ES 写不进去)
+      if ! grep -q 'name="AudioDevice"' "$target"; then
+        sed -i '1a <string name="AudioDevice" value="DAC" />' "$target" 2>/dev/null || true
+      fi
     fi
   fi
 }
@@ -432,38 +437,29 @@ apply_all_quirks() {
 }
 
 # ==================== 附加处理 ====================
-# WiFi 驱动加载 (取代 wifi-driver-load.service, 每次开机执行, modprobe 幂等)。
-# 为什么 SDIO 必须由 userspace 触发:
-#   1) 芯片上电由驱动 init 完成 (rockchip_wifi_power), 未上电不会枚举,
-#      udev 拿不到 SDIO modalias (自举死锁);
-#   2) aic8800_bsp 与 USB loader 导出同名符号 (get_adap_test), 两套栈
-#      不能同时存在, 必须按总线二选一;
-#   3) rk915 只注册 platform alias, 没有可用的 SDIO modalias 自动加载。
-# rk915 的 init 会真正 probe 芯片, 不匹配时返回错误并放下电源轨,
-# 因此可以安全地 "先 rk915, 失败再 AIC SDIO"。
+# WiFi 驱动加载, 交给 wifi-load.sh 在后台完成 (不阻塞 firstboot/ES)。
+#
+# 为什么不能靠 udev 自动加载:
+#   1) SDIO 芯片的上电脚由驱动 probe 时拉高, 没驱动就不会枚举, 也就没有
+#      sdio: modalias (自举死锁);
+#   2) aic8800_bsp 必须在 fdrv 之前, USB loader 也必须在 fdrv_usb 之前,
+#      modalias 推导不出这种顺序;
+#   3) 一个镜像多机型, 静态 modules-load.d 无法按 DTB 选栈。
+#
+# 用 systemd-run 而不是 nohup &: firstboot.service 是 oneshot, 默认
+# KillMode=control-group, hook 退出时同 cgroup 的后台进程会被清理;
+# --no-block 让 systemd 立即返回, 由 PID1 托管这个瞬时 unit.
 load_wifi_modules() {
-  local st=""
-
-  if [ -r /proc/device-tree/wireless-wlan/status ]; then
-    st=$(tr -d '\0' < /proc/device-tree/wireless-wlan/status)
-  fi
-
-  if [ "$st" = "okay" ]; then
-    if modprobe rk915 2>/dev/null; then
-      msg "WiFi: rk915 (SDIO) loaded"
+  if command -v systemd-run >/dev/null 2>&1; then
+    if systemd-run --unit=wifi-load --collect --no-block \
+        /usr/local/bin/wifi-load.sh >/dev/null 2>&1; then
+      msg "WiFi: loading in background (wifi-load)"
       return 0
     fi
-    modprobe aic8800_bsp 2>/dev/null
-    modprobe aic8800_fdrv 2>/dev/null
-    msg "WiFi: aic8800 SDIO stack loaded"
-    return 0
   fi
-
-  # USB 机型: AIC 两段式栈需要 fw loader 先于 fdrv 加载, 所以显式 modprobe;
-  # zt9101_ztopmac_usb 有 usb modalias, 由 udev/kmod 在设备枚举时自动加载。
-  if modprobe aic_load_fw_usb 2>/dev/null && modprobe aic8800_fdrv_usb 2>/dev/null; then
-    msg "WiFi: aic8800 USB stack loaded"
-  fi
+  # 没有 systemd-run 时退回同步加载, 保证 WiFi 可用
+  /usr/local/bin/wifi-load.sh || true
+  msg "WiFi: loaded synchronously"
 }
 
 apply_fc_cache() {
@@ -557,7 +553,6 @@ main() {
     echo "==================================="
     echo "   dArkOS3562 first boot setup"
     echo "==================================="
-    sleep 2
     echo "$DEVICE_NAME" | tee "$CONSOLE_FILE" >/dev/null
     set_hostname "$DEVICE_NAME"
     msg "First boot (or quirks pending), device=$DEVICE_NAME"
@@ -587,7 +582,6 @@ main() {
       echo "==================================="
       echo; echo "old: $old_device"; echo "new: $new_device"
       apply_all_quirks
-      sleep 5
     ) > /dev/tty1 2>&1
     write_quirks_stamp
     msg "Running depmod -a"
