@@ -1,0 +1,26 @@
+#!/bin/bash
+# ES START 状态栏: 显示 ES/ogage 实际改的那个硬件音量.
+# 基础镜像的 current_volume 读的是只读的 Master 占位控件 (恒为 100%),
+# 因为 dArkOS 去掉了 softvol, 音量统一走 codec 的 DAC 控件.
+ctl=""
+[ -r /home/ark/ogage.conf ] && ctl=$(awk -F= '$1=="VOLUME_CONTROL"{v=$2; gsub(/[ \t\r]/,"",v); print v; exit}' /home/ark/ogage.conf 2>/dev/null)
+[ -n "$ctl" ] || ctl=DAC
+
+v=""
+if amixer sget "$ctl" >/dev/null 2>&1; then
+	v=$(amixer sget "$ctl" 2>/dev/null | awk -F'[][]' '/Left:/ {print $2; exit}')
+	[ -z "$v" ] && v=$(amixer sget "$ctl" 2>/dev/null | awk -F'[][]' '/Mono:/ {print $2; exit}')
+fi
+
+# 保留基础镜像的原逻辑作为回退 (softvol / 蓝牙 / 其它)
+if [ -z "$v" ] && grep -q softvol /home/ark/.asoundrc 2>/dev/null; then
+	v=$(amixer sget Master 2>/dev/null | awk -F'[][]' '/Left:/ {print $2; exit}')
+fi
+if [ -z "$v" ] && grep -q bluealsa /home/ark/.asoundrc 2>/dev/null; then
+	pcm=$(bluealsactl list-pcms 2>/dev/null)
+	bt=$(bluealsactl volume ${pcm} 2>/dev/null | awk 'NR==1' | cut -d " " -f3)
+	[ -n "$bt" ] && v="$(( 200 * bt / 127 - 100 * bt / 127 ))%"
+fi
+[ -z "$v" ] && v=$(amixer sget Master 2>/dev/null | awk -F'[][]' '/Left:/ {print $2; exit}')
+
+echo "${v:-N/A}"

@@ -612,6 +612,9 @@ msgstr "仅限缺少的媒体"
 msgid "PANEL BRIGHTNESS"
 msgstr "屏幕亮度"
 
+msgid "PANEL BLACK LEVEL"
+msgstr "屏幕黑电平"
+
 msgid "PANEL CONTRAST"
 msgstr "屏幕对比度"
 
