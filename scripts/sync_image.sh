@@ -100,6 +100,7 @@ sudo rm -f \
 # 现在运行时只在 /opt/vita3k/weston, /usr 仅保留两个模块目录软链 (下面 rsync
 # 重新创建), 其余 X11 位图字体、gst 插件、iso-codes、weston demo 客户端全部清掉。
 R="$D/mnt/root"
+
 sudo rm -rf "$R/usr/lib/aarch64-linux-gnu/libweston-14" \
             "$R/usr/lib/aarch64-linux-gnu/weston" \
             "$R/usr/lib/aarch64-linux-gnu/gstreamer-1.0" \
