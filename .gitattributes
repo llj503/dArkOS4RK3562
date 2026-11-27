@@ -1,0 +1,6 @@
+# 设备侧脚本与配置必须是 LF：Windows 上 core.autocrlf=true 会破坏 shebang 与 systemd/udev 语法
+*.sh      text eol=lf
+*.service text eol=lf
+*.rules   text eol=lf
+*.cfg     text eol=lf
+*.conf    text eol=lf
