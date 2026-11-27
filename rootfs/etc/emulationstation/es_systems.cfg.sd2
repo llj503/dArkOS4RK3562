@@ -1206,7 +1206,8 @@
 					<core>bsnes</core>
 					<core>bsnes-jg</core>
 									<core>mesen2</core>
-</cores>
+					<core>armsnes</core>
+				</cores>
 			</emulator>
 			<emulator name="retroarch32">
 				<cores>
@@ -1217,7 +1218,8 @@
 					<core>bsnes</core>
 					<core>bsnes-jg</core>
 									<core>mesen2</core>
-</cores>
+					<core>armsnes</core>
+				</cores>
 			</emulator>
 			<emulator name="mednafen">
 				<cores>
@@ -1225,6 +1227,7 @@
 					<core>norecord-full</core>
 					<core>record-aspect</core>
 					<core>record-full</core>
+									<core>armsnes</core>
 				</cores>
 			</emulator>
 		</emulators>
@@ -1260,6 +1263,7 @@
 					<core>snes9x2010</core>
 					<core>chimerasnes</core>
 					<core>mednafen_supafaust</core>
+									<core>armsnes</core>
 				</cores>
 			</emulator>
 			<emulator name="retroarch32">
@@ -1268,6 +1272,7 @@
 					<core>snes9x2005</core>
 					<core>snes9x2010</core>
 					<core>snes9x</core>
+									<core>armsnes</core>
 				</cores>
 			</emulator>
 			<emulator name="mednafen">
@@ -1276,6 +1281,7 @@
 					<core>norecord-full</core>
 					<core>record-aspect</core>
 					<core>record-full</core>
+									<core>armsnes</core>
 				</cores>
 			</emulator>
 		</emulators>
