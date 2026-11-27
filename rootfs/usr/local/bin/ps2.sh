@@ -78,10 +78,12 @@ export SDL_AUDIODRIVER=alsa
 export AUDIODEV=default
 
 # 跟随 ES 语言 (与 flycast/yabasanshiro 同一套判定): ES 选中文时导出 zh_CN.UTF-8,
-# ARMSX2 按 locale 加载 resources/translations/zh-CN.tsv, 否则保持英文。
+# 并直接给 ARMSX2 环境变量 (优先于 ini 里的 Language=en-US), 前端才会加载
+# resources/translations/pcsx2-qt_zh-CN.ts; 否则保持英文。
 if grep -q '<string name="Language" value="zh-CN" />' /home/ark/.emulationstation/es_settings.cfg 2>/dev/null; then
   export LANG=zh_CN.UTF-8
   export LC_ALL=zh_CN.UTF-8
+  export ARMSX2_LANGUAGE=zh-CN
 else
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
