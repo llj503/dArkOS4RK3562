@@ -112,6 +112,11 @@ if [ -z "$BL_SAVED" ] || ! [ "$BL_SAVED" -gt 0 ] 2>/dev/null; then
     BL_SAVED=200
 fi
 set_governors
+# 实测 set_governors 有时会被其它服务改回 simple_ondemand，GPU 掉到 300 MHz 后
+# 帧时间抖动明显；启动前再无条件写一次。
+for d in /sys/class/devfreq/*.gpu; do
+    [ -w "$d/governor" ] && echo performance > "$d/governor" 2>/dev/null || true
+done
 
 mkdir -p "$RTDIR"
 chown ark:ark "$RTDIR"
@@ -221,12 +226,21 @@ for key, axis_x, axis_y in (("circle_pad", 0, 1), ("c_stick", 2, 3)):
               f"{base},axis_x:{axis_x},axis_y:{axis_y},deadzone:0.100000")
     set_value("Controls", f"profiles\\1\\{key}\\default", False)
 
+# 60 Hz 面板上不限帧（frame_limit=0）会让帧间隔不齐，观感发滞；
+# 只在配置文件还没有这一项时补默认值，OSD 视频页写入后不再覆盖。
+if not any(line.startswith("frame_limit=") for line in lines):
+    set_value("Renderer", "frame_limit", 100)
+
 path.write_text("\n".join(lines) + "\n")
 PY
 chown ark:ark "$DATA/config/azahar-emu" "$DATA/config/azahar-emu/custom" "$CFG" 2>/dev/null || true
 
 # Azahar 的 SDL 直接读 evdev；Weston/libinput 会忽略手柄，不需要 uinput 映射器。
 export SDL_GAMECONTROLLERCONFIG="1900a4dd726b333536322d6a6f797300,rk3562-joystick,a:b1,b:b0,x:b2,y:b3,back:b8,start:b9,guide:b10,misc1:b17,leftstick:b11,rightstick:b12,dpup:b26,dpdown:b27,dpleft:b28,dpright:b29,leftshoulder:b4,rightshoulder:b5,lefttrigger:a2,righttrigger:a5,leftx:a0,lefty:a1,rightx:a3,righty:a4,platform:Linux,"
+# Mii 选择器 / 软件键盘是独立的 Qt 对话框，kiosk 里没有鼠标键盘，手柄也到不了
+# Qt 焦点；置位后由内置默认实现应答（标准 Mii、无软键盘）。
+export AZAHAR_NO_QT_APPLETS=1
+
 echo "VAR=azahar-qt" > /home/ark/.config/KILLIT
 systemctl restart killer_daemon.service >/dev/null 2>&1 || true
 
