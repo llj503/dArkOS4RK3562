@@ -55,6 +55,7 @@ mkdir -p "$HOME/.cache/dolphin-emu/Shaders"
 # 首启配置模板
 [ -f "$CFG_DIR/Dolphin.ini" ] || cp /opt/dolphin/Dolphin.ini.template "$CFG_DIR/Dolphin.ini"
 [ -f "$CFG_DIR/GCPadNew.ini" ] || cp /opt/dolphin/GCPadNew.ini.template "$CFG_DIR/GCPadNew.ini"
+[ -f "$CFG_DIR/WiimoteNew.ini" ] || cp /opt/dolphin/WiimoteNew.ini.template "$CFG_DIR/WiimoteNew.ini"
 
 # 手柄映射与 dreamcast.sh 一致 (这台机器的 A/B 索引)
 export SDL_GAMECONTROLLERCONFIG="1900a4dd726b333536322d6a6f797300,rk3562-joystick,a:b1,b:b0,x:b2,y:b3,back:b8,start:b9,guide:b10,misc1:b17,leftstick:b11,rightstick:b12,dpup:b13,dpdown:b14,dpleft:b15,dpright:b16,leftshoulder:b4,rightshoulder:b5,lefttrigger:a2,righttrigger:a5,leftx:a0,lefty:a1,rightx:a3,righty:a4,platform:Linux,"
